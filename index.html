@@ -406,7 +406,7 @@ scene.add(trunk);
 reg(trunk, 'axon');
 
 // Myelin sheath on trunk + Nodes of Ranvier (gap markers)
-var myelinMat = new THREE.MeshPhongMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.35, shininess: 30, emissive: 0x000000 });
+var myelinMat = new THREE.MeshPhongMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.50, shininess: 30, emissive: 0x000000 });
 var segLen = 2.0, gap = 0.4;
 var ranvierGaps = [];
 var ranvierGeo = new THREE.TorusGeometry(AXON_TRUNK_RADIUS + 0.3, 0.08, 8, 20);
@@ -518,7 +518,7 @@ scene.add(muscleGroup);
 
 // Main muscle body
 var muscleBodyGeo = new THREE.CylinderGeometry(6.0, 6.5, 10, 36, 1, false);
-var muscleMat = new THREE.MeshPhongMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.35, shininess: 20, emissive: 0x000000 });
+var muscleMat = new THREE.MeshPhongMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55, shininess: 20, emissive: 0x000000 });
 var muscleBody = new THREE.Mesh(muscleBodyGeo, muscleMat);
 muscleBody.rotation.x = Math.PI / 2;
 muscleBody.position.set(4, MUSCLE_Y - 3, 0);
@@ -529,7 +529,7 @@ reg(muscleBody, 'muscle');
 
 // Sarcolemma (top surface)
 var sarcGeo = new THREE.BoxGeometry(22, 0.4, 16);
-var sarcMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.45, emissive: 0x000000 });
+var sarcMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.65, emissive: 0x000000 });
 var sarc = new THREE.Mesh(sarcGeo, sarcMat);
 sarc.position.set(4, MUSCLE_Y, 0);
 muscleGroup.add(sarc);
@@ -551,7 +551,7 @@ for (var fi = 0; fi < FOLD_COUNT; fi++) {
   // Build V-shaped groove using two angled planes (left wall + right wall)
   var foldGroup = new THREE.Group();
   var wallGeo = new THREE.BoxGeometry(0.15, FOLD_DEPTH * 1.4, 9.0);
-  var wallMat = new THREE.MeshPhongMaterial({ color: 0xf87171, transparent: true, opacity: 0.32, side: THREE.DoubleSide, emissive: 0x000000 });
+  var wallMat = new THREE.MeshPhongMaterial({ color: 0xf87171, transparent: true, opacity: 0.55, side: THREE.DoubleSide, emissive: 0x000000 });
 
   // Left wall (angled inward)
   var lw = new THREE.Mesh(wallGeo, wallMat.clone());
@@ -1266,67 +1266,75 @@ function applySpotlight(phase) {
       break;
     case 'AP_PROPAGATION':
       setCatTarget('axon', 1.0); setCatTarget('myelin', 1.0); setCatTarget('branch', 1.0);
-      setCatTarget('bouton', 0.6);
-      setCatTarget('vesicle', 0.3); setCatTarget('caChannel', 0.3);
-      setCatTarget('cleft', 1, 0.08); setCatTarget('basalLamina', 0.3);
-      setCatTarget('receptor', 0.3); setCatTarget('ache', 0.3);
-      setCatTarget('fold', 0.3); setCatTarget('sarc', 0.3); setCatTarget('muscle', 0.3);
+      setCatTarget('bouton', 0.7);
+      setCatTarget('vesicle', 0.5); setCatTarget('caChannel', 0.5);
+      setCatTarget('cleft', 1, 0.12); setCatTarget('basalLamina', 0.5);
+      setCatTarget('receptor', 0.55); setCatTarget('ache', 0.5);
+      setCatTarget('fold', 0.55); setCatTarget('sarc', 0.55); setCatTarget('muscle', 0.55);
+      setCatTarget('naChannel', 0.5);
       break;
     case 'CA_INFLUX':
-      setCatTarget('axon', 0.3); setCatTarget('myelin', 0.3); setCatTarget('branch', 0.5);
+      setCatTarget('axon', 0.5); setCatTarget('myelin', 0.5); setCatTarget('branch', 0.6);
       setCatTarget('bouton', 1.0);
-      setCatTarget('vesicle', 0.6); setCatTarget('caChannel', 1.0);
-      setCatTarget('cleft', 1, 0.08); setCatTarget('basalLamina', 0.3);
-      setCatTarget('receptor', 0.3); setCatTarget('ache', 0.3);
-      setCatTarget('fold', 0.3); setCatTarget('sarc', 0.3); setCatTarget('muscle', 0.3);
+      setCatTarget('vesicle', 0.7); setCatTarget('caChannel', 1.0);
+      setCatTarget('cleft', 1, 0.12); setCatTarget('basalLamina', 0.5);
+      setCatTarget('receptor', 0.55); setCatTarget('ache', 0.5);
+      setCatTarget('fold', 0.55); setCatTarget('sarc', 0.55); setCatTarget('muscle', 0.55);
+      setCatTarget('naChannel', 0.5);
       break;
     case 'EXOCYTOSIS':
-      setCatTarget('axon', 0.4); setCatTarget('myelin', 0.4); setCatTarget('branch', 0.4);
+      setCatTarget('axon', 0.6); setCatTarget('myelin', 0.6); setCatTarget('branch', 0.6);
       setCatTarget('bouton', 1.0);
-      setCatTarget('vesicle', 1.0); setCatTarget('caChannel', 0.5);
-      setCatTarget('cleft', 1, 0.12); setCatTarget('basalLamina', 0.4);
-      setCatTarget('receptor', 0.4); setCatTarget('ache', 0.4);
-      setCatTarget('fold', 0.4); setCatTarget('sarc', 0.4); setCatTarget('muscle', 0.4);
+      setCatTarget('vesicle', 1.0); setCatTarget('caChannel', 0.6);
+      setCatTarget('cleft', 1, 0.15); setCatTarget('basalLamina', 0.6);
+      setCatTarget('receptor', 0.6); setCatTarget('ache', 0.5);
+      setCatTarget('fold', 0.6); setCatTarget('sarc', 0.6); setCatTarget('muscle', 0.6);
+      setCatTarget('naChannel', 0.5);
       break;
     case 'DIFFUSION':
-      setCatTarget('axon', 0.4); setCatTarget('myelin', 0.4); setCatTarget('branch', 0.4);
-      setCatTarget('bouton', 0.5);
-      setCatTarget('vesicle', 0.4); setCatTarget('caChannel', 0.4);
-      setCatTarget('cleft', 1, 0.25); setCatTarget('basalLamina', 0.5);
-      setCatTarget('receptor', 0.5); setCatTarget('ache', 0.4);
-      setCatTarget('fold', 0.5); setCatTarget('sarc', 0.5); setCatTarget('muscle', 0.5);
+      setCatTarget('axon', 0.6); setCatTarget('myelin', 0.6); setCatTarget('branch', 0.6);
+      setCatTarget('bouton', 0.6);
+      setCatTarget('vesicle', 0.6); setCatTarget('caChannel', 0.6);
+      setCatTarget('cleft', 1, 0.28); setCatTarget('basalLamina', 0.6);
+      setCatTarget('receptor', 0.65); setCatTarget('ache', 0.6);
+      setCatTarget('fold', 0.65); setCatTarget('sarc', 0.65); setCatTarget('muscle', 0.65);
+      setCatTarget('naChannel', 0.5);
       break;
     case 'BINDING':
-      setCatTarget('axon', 0.4); setCatTarget('myelin', 0.4); setCatTarget('branch', 0.4);
-      setCatTarget('bouton', 0.5);
-      setCatTarget('vesicle', 0.4); setCatTarget('caChannel', 0.4);
-      setCatTarget('cleft', 1, 0.22); setCatTarget('basalLamina', 0.5);
-      setCatTarget('receptor', 1.0); setCatTarget('ache', 0.5);
-      setCatTarget('fold', 0.6); setCatTarget('sarc', 0.5); setCatTarget('muscle', 0.5);
+      setCatTarget('axon', 0.6); setCatTarget('myelin', 0.6); setCatTarget('branch', 0.6);
+      setCatTarget('bouton', 0.6);
+      setCatTarget('vesicle', 0.6); setCatTarget('caChannel', 0.6);
+      setCatTarget('cleft', 1, 0.25); setCatTarget('basalLamina', 0.6);
+      setCatTarget('receptor', 1.0); setCatTarget('ache', 0.6);
+      setCatTarget('fold', 0.7); setCatTarget('sarc', 0.65); setCatTarget('muscle', 0.65);
+      setCatTarget('naChannel', 0.6);
       break;
     case 'EPP_GENERATION':
-      setCatTarget('axon', 0.4); setCatTarget('myelin', 0.4); setCatTarget('branch', 0.4);
-      setCatTarget('bouton', 0.5);
-      setCatTarget('vesicle', 0.4); setCatTarget('caChannel', 0.4);
-      setCatTarget('cleft', 1, 0.18); setCatTarget('basalLamina', 0.5);
-      setCatTarget('receptor', 1.0); setCatTarget('ache', 0.4);
-      setCatTarget('fold', 1.0); setCatTarget('sarc', 1.0); setCatTarget('muscle', 0.6);
+      setCatTarget('axon', 0.6); setCatTarget('myelin', 0.6); setCatTarget('branch', 0.6);
+      setCatTarget('bouton', 0.6);
+      setCatTarget('vesicle', 0.6); setCatTarget('caChannel', 0.6);
+      setCatTarget('cleft', 1, 0.20); setCatTarget('basalLamina', 0.6);
+      setCatTarget('receptor', 1.0); setCatTarget('ache', 0.6);
+      setCatTarget('fold', 1.0); setCatTarget('sarc', 1.0); setCatTarget('muscle', 0.7);
+      setCatTarget('naChannel', 1.0);
       break;
     case 'AP_MUSCLE':
-      setCatTarget('axon', 0.4); setCatTarget('myelin', 0.4); setCatTarget('branch', 0.4);
-      setCatTarget('bouton', 0.4);
-      setCatTarget('vesicle', 0.4); setCatTarget('caChannel', 0.4);
-      setCatTarget('cleft', 1, 0.15); setCatTarget('basalLamina', 0.5);
-      setCatTarget('receptor', 0.6); setCatTarget('ache', 0.4);
-      setCatTarget('fold', 0.5); setCatTarget('sarc', 1.0); setCatTarget('muscle', 1.0);
+      setCatTarget('axon', 0.6); setCatTarget('myelin', 0.6); setCatTarget('branch', 0.6);
+      setCatTarget('bouton', 0.6);
+      setCatTarget('vesicle', 0.6); setCatTarget('caChannel', 0.6);
+      setCatTarget('cleft', 1, 0.18); setCatTarget('basalLamina', 0.6);
+      setCatTarget('receptor', 0.7); setCatTarget('ache', 0.6);
+      setCatTarget('fold', 0.65); setCatTarget('sarc', 1.0); setCatTarget('muscle', 1.0);
+      setCatTarget('naChannel', 1.0);
       break;
     case 'DEGRADATION':
-      setCatTarget('axon', 0.4); setCatTarget('myelin', 0.4); setCatTarget('branch', 0.4);
-      setCatTarget('bouton', 0.5);
-      setCatTarget('vesicle', 0.4); setCatTarget('caChannel', 0.4);
-      setCatTarget('cleft', 1, 0.22); setCatTarget('basalLamina', 0.6);
-      setCatTarget('receptor', 0.5); setCatTarget('ache', 1.0);
-      setCatTarget('fold', 0.5); setCatTarget('sarc', 0.5); setCatTarget('muscle', 0.5);
+      setCatTarget('axon', 0.6); setCatTarget('myelin', 0.6); setCatTarget('branch', 0.6);
+      setCatTarget('bouton', 0.6);
+      setCatTarget('vesicle', 0.6); setCatTarget('caChannel', 0.6);
+      setCatTarget('cleft', 1, 0.25); setCatTarget('basalLamina', 0.7);
+      setCatTarget('receptor', 0.65); setCatTarget('ache', 1.0);
+      setCatTarget('fold', 0.65); setCatTarget('sarc', 0.65); setCatTarget('muscle', 0.65);
+      setCatTarget('naChannel', 0.5);
       break;
     case 'RELAXATION':
       // gradual return handled by lerp toward base (targets already set to base)
