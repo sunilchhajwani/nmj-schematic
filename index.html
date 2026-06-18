@@ -575,13 +575,14 @@ for (var fi = 0; fi < FOLD_COUNT; fi++) {
 }
 makeLabel('Junctional\nFolds', '#f87171', 5).position.set(1, MUSCLE_Y - 2.5, 6);
 
-// Synaptic cleft slabs (one per bouton)
+// Synaptic cleft — thin translucent band between boutons and sarcolemma (not a chunky box)
 var cleftSlabs = [];
-var cleftGeo = new THREE.BoxGeometry(5.5, 4.5, 5.5);
-var cleftMat = new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
+var cleftGeo = new THREE.PlaneGeometry(5.5, 4.5);
+var cleftMat = new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.06, side: THREE.DoubleSide });
 for (var ci = 0; ci < boutonPositions.length; ci++) {
   var pos = boutonPositions[ci];
   var cm = new THREE.Mesh(cleftGeo, cleftMat.clone());
+  cm.rotation.x = -Math.PI / 2;
   cm.position.set(pos.x, -0.75, pos.z);
   cleftSlabs.push(cm);
   muscleGroup.add(cm);
