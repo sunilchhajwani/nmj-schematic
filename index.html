@@ -241,6 +241,9 @@
     <button class="btn active" id="btn-pause">⏸ Pause</button>
     <button class="btn" id="btn-step">⏭ Step ▸</button>
   </div>
+  <div class="btn-row" style="margin-top:8px">
+    <button class="btn active" id="btn-detail">🔬 Detailed</button>
+  </div>
 </div>
 
 <!-- Readout -->
@@ -280,6 +283,7 @@
     <span class="key">Slider</span><span>Continuous stimulation (0–100 Hz)</span>
     <span class="key">⏸ Pause</span><span>Freeze simulation at current phase</span>
     <span class="key">⏭ Step ▸</span><span>Advance to next phase manually</span>
+    <span class="key">🔬 Detailed</span><span>Toggle simplified vs detailed view</span>
   </div>
 </div>
 
@@ -327,6 +331,10 @@ scene.add(fillLight);
 var LABELS = [];
 var showLabels = true;
 var labelOpacity = 0.30;
+var detailedMode = true; // true = show all molecular detail, false = simplified macro view
+
+// Objects to hide in simple mode (molecular-level detail)
+var detailOnlyObjects = [];
 
 function makeLabel(text, color, scale) {
   var canvas = document.createElement('canvas');
@@ -360,6 +368,19 @@ function makeLabel(text, color, scale) {
 function updateLabelOpacity() {
   for (var i = 0; i < LABELS.length; i++) {
     LABELS[i].material.opacity = labelOpacity;
+  }
+}
+
+// Toggle between detailed (all molecular structures) and simple (macro only) view
+function setDetailMode(detailed) {
+  detailedMode = detailed;
+  for (var i = 0; i < detailOnlyObjects.length; i++) {
+    detailOnlyObjects[i].visible = detailed;
+  }
+  var btn = document.getElementById('btn-detail');
+  if (btn) {
+    btn.textContent = detailed ? '🔬 Detailed' : ' Simplified';
+    btn.classList.toggle('active', detailed);
   }
 }
 
@@ -646,6 +667,7 @@ for (var bIndex = 0; bIndex < boutonPositions.length; bIndex++) {
     data.vesicles.push(vm);
     scene.add(vm);
     reg(vm, 'vesicle');
+    detailOnlyObjects.push(vm);
   }
 
   // Ca channels at the bottom of each bouton (active zone)
@@ -661,6 +683,7 @@ for (var bIndex = 0; bIndex < boutonPositions.length; bIndex++) {
     data.caSpawnTimers.push(0);
     scene.add(chm);
     reg(chm, 'caChannel');
+    detailOnlyObjects.push(chm);
 
     // Inward streak cone pointing up into bouton
     var streak = new THREE.Mesh(caStreakGeo, caStreakMat.clone());
@@ -669,6 +692,7 @@ for (var bIndex = 0; bIndex < boutonPositions.length; bIndex++) {
     streak.userData.channel = chm;
     scene.add(streak);
     caStreaks.push(streak);
+    detailOnlyObjects.push(streak);
   }
 
   boutonData.push(data);
@@ -708,6 +732,7 @@ for (var ci3 = 0; ci3 < foldCrestData.length; ci3++) {
     nachrs.push(rm);
     scene.add(rm);
     reg(rm, 'receptor');
+    detailOnlyObjects.push(rm);
   }
 
   // VG Na⁺ channels in the fold DEPTH (near the floor of the fold)
@@ -718,6 +743,7 @@ for (var ci3 = 0; ci3 < foldCrestData.length; ci3++) {
     naChannels.push(nm);
     scene.add(nm);
     reg(nm, 'naChannel');
+    detailOnlyObjects.push(nm);
   }
 }
 
@@ -735,6 +761,7 @@ for (var ri = 0; ri < boutonPositions.length; ri++) {
     acheEnzymes.push(am);
     scene.add(am);
     reg(am, 'ache');
+    detailOnlyObjects.push(am);
   }
 }
 makeLabel('nAChR\n(crest)', '#22c55e', 5).position.set(1, MUSCLE_Y + 0.8, 7);
@@ -751,6 +778,7 @@ var achGeo = new THREE.SphereGeometry(0.14, 8, 6);
 var achMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.9 });
 
 function spawnACh(originPos) {
+  if (!detailedMode) return;
   var p = new THREE.Mesh(achGeo, achMat.clone());
   p.position.copy(originPos);
   p.scale.setScalar(1.4);
@@ -776,6 +804,7 @@ var caIonGeo = new THREE.SphereGeometry(0.18, 10, 8);
 var caIonMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.95 });
 
 function spawnCalciumIon(channelPos) {
+  if (!detailedMode) return;
   var p = new THREE.Mesh(caIonGeo, caIonMat.clone());
   p.position.set(channelPos.x + (Math.random()-0.5)*0.25, channelPos.y + 0.3, channelPos.z + (Math.random()-0.5)*0.25);
   scene.add(p);
@@ -795,6 +824,7 @@ var degGeo = new THREE.SphereGeometry(0.13, 6, 5);
 var degMat = new THREE.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.85 });
 
 function spawnDegradation(pos) {
+  if (!detailedMode) return;
   for (var d = 0; d < 2; d++) {
     var p = new THREE.Mesh(degGeo, degMat.clone());
     p.position.copy(pos);
@@ -1365,6 +1395,7 @@ function stepToNextPhase() {
 
 // Spawn exocytosis fusion ring at bouton bottom
 function spawnFusionRing(pos) {
+  if (!detailedMode) return;
   var ringGeo = new THREE.RingGeometry(0.2, 0.35, 20);
   var ringMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
   var ring = new THREE.Mesh(ringGeo, ringMat);
@@ -1380,6 +1411,7 @@ function spawnFusionRing(pos) {
 
 // Spawn binding ring at receptor
 function spawnBindingRing(pos) {
+  if (!detailedMode) return;
   var ringGeo = new THREE.RingGeometry(0.15, 0.25, 18);
   var ringMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 1.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
   var ring = new THREE.Mesh(ringGeo, ringMat);
@@ -1395,6 +1427,7 @@ function spawnBindingRing(pos) {
 
 // Spawn diffusion cloud around ACh
 function spawnDiffusionCloud(pos) {
+  if (!detailedMode) return;
   var g = new THREE.SphereGeometry(0.2, 10, 8);
   var m = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending });
   var s = new THREE.Mesh(g, m);
@@ -1408,6 +1441,7 @@ function spawnDiffusionCloud(pos) {
 
 // Spawn cut flash at AChE
 function spawnCutFlash(pos) {
+  if (!detailedMode) return;
   var g = new THREE.SphereGeometry(0.15, 8, 6);
   var m = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending });
   var s = new THREE.Mesh(g, m);
@@ -2245,9 +2279,12 @@ document.getElementById('btn-pause').addEventListener('click', function(e) {
 document.getElementById('btn-step').addEventListener('click', function() {
   if (started) {
     stepToNextPhase();
-    // Briefly unpause to let the new phase animate, then keep paused state
     phys.stepRequested = true;
   }
+});
+
+document.getElementById('btn-detail').addEventListener('click', function() {
+  setDetailMode(!detailedMode);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
