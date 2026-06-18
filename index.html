@@ -622,7 +622,7 @@ muscleGroup.add(eppWave);
 
 // ── Per-bouton active zone components ──
 var boutonData = [];
-var VES_PER_BOUTON = 10;
+var VES_PER_BOUTON = 6;
 var VES_RADIUS = 0.32;
 var CHANNELS_PER_BOUTON = 4;
 
@@ -1583,7 +1583,7 @@ function updatePhysiology(dt) {
               v.position.y -= dt * 2.5;
               v.scale.setScalar(Math.max(0.1, 1.3 - v.userData.shrinkTime * 3));
               v.material.opacity = Math.max(0, 1 - v.userData.shrinkTime * 2.5);
-              if (Math.random() < dt * 40) {
+              if (Math.random() < dt * 8) {  // ~2-3 ACh particles per fusing vesicle (realistic scarcity)
                 spawnACh(v.position);
               }
               if (v.userData.shrinkTime > 0.1 && !v.userData.ringSpawned) {
