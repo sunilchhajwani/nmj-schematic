@@ -389,7 +389,7 @@ function addEffect(mesh, life, onUpdate) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 var BRANCH_Y = 2.0;
-var MUSCLE_Y = -1.5;
+var MUSCLE_Y = -3.5;
 var AXON_TRUNK_RADIUS = 1.0;
 var BRANCH_RADIUS = 0.7;
 var BOUTON_RADIUS = 2.4;
@@ -585,12 +585,12 @@ makeLabel('Junctional\nFolds', '#f87171', 5).position.set(1, MUSCLE_Y - 2.5, 6);
 
 // Synaptic cleft slabs (one per bouton)
 var cleftSlabs = [];
-var cleftGeo = new THREE.BoxGeometry(5.5, 1.5, 5.5);
+var cleftGeo = new THREE.BoxGeometry(5.5, 4.5, 5.5);
 var cleftMat = new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
 for (var ci = 0; ci < boutonPositions.length; ci++) {
   var pos = boutonPositions[ci];
   var cm = new THREE.Mesh(cleftGeo, cleftMat.clone());
-  cm.position.set(pos.x, 0, pos.z);
+  cm.position.set(pos.x, -0.75, pos.z);
   cleftSlabs.push(cm);
   muscleGroup.add(cm);
   reg(cm, 'cleft');
@@ -746,7 +746,7 @@ for (var ri = 0; ri < boutonPositions.length; ri++) {
 }
 makeLabel('nAChR\n(crest)', '#22c55e', 5).position.set(1, MUSCLE_Y + 0.8, 7);
 makeLabel('VG Na⁺\n(depth)', '#f97316', 5).position.set(1, MUSCLE_Y - 3.0, 7);
-makeLabel('AChE\n(cleft)', '#ef4444', 5).position.set(10, 0.5, 7);
+makeLabel('AChE\n(cleft)', '#ef4444', 5).position.set(10, -0.75, 7);
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  PARTICLE SYSTEMS
@@ -2132,7 +2132,7 @@ var camRadius = 50;
 var camTheta = 0.55;
 var camPhi = 0.40;
 var targetTheta = camTheta, targetPhi = camPhi, targetRadius = camRadius;
-var camTarget = new THREE.Vector3(3, 0.5, 0);
+var camTarget = new THREE.Vector3(3, -0.5, 0);
 
 var isDragging = false;
 var lastMouseX = 0, lastMouseY = 0;
