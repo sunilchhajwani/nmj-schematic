@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neuromuscular Junction — 3D Schematic</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0b1220; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+  #canvas-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
+  canvas { display: block; }
+
+  /* ── HUD ── */
+  #hud { position: fixed; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 10; }
+  .hud-top { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 24px; }
+  .title-block { pointer-events: auto; }
+  .title-block h1 { font-size: 20px; font-weight: 700; color: #f8f9fa; letter-spacing: -0.3px; }
+  .title-block p { font-size: 12px; color: #94a3b8; margin-top: 3px; max-width: 380px; line-height: 1.4; }
+
+  .phase-badge {
+    pointer-events: auto;
+    background: rgba(15,23,42,0.9); border: 1px solid #1e293b; border-radius: 10px;
+    padding: 8px 18px; text-align: center; backdrop-filter: blur(8px);
+  }
+  .phase-badge .label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; }
+  .phase-badge .phase { font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .phase-badge .step { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+  /* ── Controls Panel ── */
+  #controls {
+    position: fixed; bottom: 20px; left: 20px; width: 280px;
+    background: rgba(15,23,42,0.92); border: 1px solid #1e293b; border-radius: 14px;
+    padding: 18px; z-index: 10; backdrop-filter: blur(10px);
+  }
+  #controls h3 { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .ctrl-row { margin-bottom: 14px; }
+  .ctrl-row:last-child { margin-bottom: 0; }
+  .ctrl-row label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .ctrl-row label span { color: #22d3ee; font-weight: 600; }
+  input[type=range] { width: 100%; -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; background: #1e293b; outline: none; pointer-events: auto; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #22d3ee; cursor: pointer; box-shadow: 0 0 6px rgba(34,211,238,0.5); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #22d3ee; cursor: pointer; border: none; }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 6px; }
+  .btn {
+    flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e293b;
+    background: #0f172a; color: #e2e8f0; font-size: 11px; font-weight: 600;
+    cursor: pointer; pointer-events: auto; transition: all 0.2s; text-align: center;
+  }
+  .btn:hover { border-color: #22d3ee; background: #122033; }
+  .btn.active { background: #1a3a5a; border-color: #22d3ee; color: #22d3ee; }
+
+  /* ── Readout Panel ── */
+  #readout {
+    position: fixed; bottom: 20px; right: 20px; width: 260px;
+    background: rgba(15,23,42,0.92); border: 1px solid #1e293b; border-radius: 14px;
+    padding: 16px 18px; z-index: 10; backdrop-filter: blur(10px);
+  }
+  #readout h3 { font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .readout-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 11px; }
+  .readout-grid .key { color: #94a3b8; }
+  .readout-grid .val { color: #f8f9fa; font-weight: 600; font-family: 'SF Mono', 'Consolas', monospace; text-align: right; }
+  .readout-grid .val.accent { color: #22d3ee; }
+  .readout-grid .val.warn { color: #fbbf24; }
+  .readout-grid .val.fire { color: #ef4444; }
+
+  /* ── Trace canvas ── */
+  #trace-panel {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: 380px; height: 90px; z-index: 10;
+    background: rgba(15,23,42,0.92); border: 1px solid #1e293b; border-radius: 12px;
+    padding: 8px 12px; backdrop-filter: blur(10px);
+  }
+  #trace-panel .trace-title { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+  #trace-canvas { width: 100%; height: 58px; display: block; }
+
+  /* ── Tip bar ── */
+  #tip-bar {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(15,23,42,0.95); border: 1px solid #22d3ee; border-radius: 10px;
+    padding: 10px 24px; font-size: 12px; color: #e2e8f0; z-index: 10;
+    opacity: 0; transition: opacity 0.4s; pointer-events: none; max-width: 500px; text-align: center;
+    backdrop-filter: blur(8px);
+  }
+  #tip-bar.show { opacity: 1; }
+  #tip-bar .tip-icon { margin-right: 6px; }
+
+  /* ── Legend ── */
+  #legend {
+    position: fixed; top: 100px; right: 20px; width: 220px;
+    background: rgba(15,23,42,0.92); border: 1px solid #1e293b; border-radius: 12px;
+    padding: 14px 16px; z-index: 10; backdrop-filter: blur(10px); display: none;
+  }
+  #legend.show { display: block; }
+  #legend h3 { font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-bottom: 5px; color: #e2e8f0; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Start overlay ── */
+  #start-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(11,18,32,0.97); z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.5s;
+  }
+  #start-overlay.hidden { opacity: 0; pointer-events: none; }
+  #start-overlay h1 { font-size: 32px; font-weight: 700; color: #f8f9fa; margin-bottom: 8px; }
+  #start-overlay p { font-size: 14px; color: #94a3b8; max-width: 460px; text-align: center; line-height: 1.6; margin-bottom: 28px; padding: 0 20px; }
+  #start-overlay .start-btn {
+    padding: 14px 48px; border-radius: 12px; border: 1px solid #22d3ee;
+    background: linear-gradient(135deg, #1a3a5a, #0f172a); color: #22d3ee;
+    font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  #start-overlay .start-btn:hover { background: #22d3ee; color: #0b1220; box-shadow: 0 0 20px rgba(34,211,238,0.4); }
+  #start-overlay .controls-grid {
+    display: grid; grid-template-columns: auto auto; gap: 6px 20px; margin-top: 24px;
+    font-size: 11px; color: #64748b;
+  }
+  #start-overlay .controls-grid .key { color: #94a3b8; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-top">
+    <div class="title-block">
+      <h1>Neuromuscular Junction — 3D Schematic</h1>
+      <p>Interactive cross-section of skeletal muscle fibre showing neuromuscular transmission — AP arrival → Ca²⁺ influx → ACh exocytosis → receptor binding → EPP → AChE degradation</p>
+    </div>
+    <div class="phase-badge">
+      <div class="label">Current Phase</div>
+      <div class="phase" id="phase-name" style="color:#64748b">RESTING</div>
+      <div class="step" id="phase-step">Awaiting action potential</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tip bar -->
+<div id="tip-bar"><span class="tip-icon">💡</span><span id="tip-text"></span></div>
+
+<!-- Legend -->
+<div id="legend" class="show">
+  <h3>Structure Legend</h3>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Motor axon (myelinated)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Axon terminal (bouton)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Synaptic vesicles (ACh)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1e3a8a"></div>Presynaptic Ca²⁺ channel</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Synaptic cleft (50 nm)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22d3ee"></div>ACh molecule</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>nAChR (nicotinic receptor)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>AChE (acetylcholinesterase)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Junctional folds</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>Sarcolemma / muscle fibre</div>
+</div>
+
+<!-- Controls -->
+<div id="controls">
+  <h3>⚡ Stimulation Controls</h3>
+  <div class="ctrl-row">
+    <label>Stimulation frequency <span id="stim-val">0 Hz</span></label>
+    <input type="range" id="stim-slider" min="0" max="100" value="0">
+  </div>
+  <div class="ctrl-row">
+    <label>Animation speed <span id="speed-val">1.0×</span></label>
+    <input type="range" id="speed-slider" min="20" max="300" value="100">
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="btn-fire">🔥 Fire AP</button>
+    <button class="btn active" id="btn-labels">🏷️ Labels</button>
+    <button class="btn" id="btn-legend">📖 Legend</button>
+  </div>
+</div>
+
+<!-- Readout -->
+<div id="readout">
+  <h3>Live Readouts</h3>
+  <div class="readout-grid">
+    <div class="key">[Ca²⁺]ₚᵣₑ (µmol/L)</div><div class="val accent" id="rd-ca">0.10</div>
+    <div class="key">Vesicles released</div><div class="val" id="rd-ves">0</div>
+    <div class="key">[ACh] cleft (µmol/L)</div><div class="val warn" id="rd-ach">0.0</div>
+    <div class="key">nAChR activated</div><div class="val" id="rd-receptors">0 / 12</div>
+    <div class="key">EPP (mV)</div><div class="val accent" id="rd-epp">0.0</div>
+    <div class="key">Membrane potential</div><div class="val" id="rd-vm">−90.0</div>
+    <div class="key">AChE activity</div><div class="val" id="rd-ache">0</div>
+    <div class="key">AP fired (muscle)</div><div class="val fire" id="rd-ap">0</div>
+  </div>
+</div>
+
+<!-- Trace -->
+<div id="trace-panel">
+  <div class="trace-title">Membrane Potential Trace (mV vs time)</div>
+  <canvas id="trace-canvas"></canvas>
+</div>
+
+<!-- Start overlay -->
+<div id="start-overlay">
+  <h1>Neuromuscular Junction</h1>
+  <p>3D interactive schematic of neuromuscular transmission at the skeletal muscle end-plate. Watch the action potential arrive, trigger Ca²⁺ influx, release ACh vesicles, activate nicotinic receptors, generate the end-plate potential, and degrade ACh via acetylcholinesterase.</p>
+  <button class="start-btn" id="start-btn">Enter Simulation</button>
+  <div class="controls-grid">
+    <span class="key">Drag</span><span>Rotate view</span>
+    <span class="key">Scroll</span><span>Zoom in/out</span>
+    <span class="key">🔥 Fire AP</span><span>Trigger single action potential</span>
+    <span class="key">Slider</span><span>Continuous stimulation (0–100 Hz)</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+"use strict";
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCENE SETUP
+// ═══════════════════════════════════════════════════════════════════════════
+var container = document.getElementById('canvas-container');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1220);
+scene.fog = new THREE.Fog(0x0b1220, 35, 80);
+
+var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(18, 12, 28);
+
+var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+// ── Lighting ──
+scene.add(new THREE.HemisphereLight(0x445566, 0x111122, 0.5));
+var dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+dirLight.position.set(10, 25, 15);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.left = -30;
+dirLight.shadow.camera.right = 30;
+dirLight.shadow.camera.top = 20;
+dirLight.shadow.camera.bottom = -20;
+scene.add(dirLight);
+var fillLight = new THREE.DirectionalLight(0x6080a0, 0.3);
+fillLight.position.set(-15, 10, -10);
+scene.add(fillLight);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ANATOMY BUILD
+// ═══════════════════════════════════════════════════════════════════════════
+// All geometry is built along X-axis = longitudinal axis of the axon/muscle
+// Y = vertical (cleft direction), Z = lateral
+
+var LABELS = [];      // sprite labels
+var showLabels = true;
+
+function makeLabel(text, color, scale) {
+  var canvas = document.createElement('canvas');
+  canvas.width = 320; canvas.height = 128;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(15,23,42,0.82)';
+  ctx.fillRect(0, 0, 320, 128);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, 318, 126);
+  ctx.font = 'bold 20px Segoe UI, sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  var lines = text.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], 160, 64 + (i - (lines.length-1)/2) * 24);
+  }
+  var tex = new THREE.Texture(canvas);
+  tex.needsUpdate = true;
+  var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  var sprite = new THREE.Sprite(mat);
+  sprite.scale.set(scale || 5, scale * 0.4 || 2, 1);
+  sprite.visible = showLabels;
+  LABELS.push(sprite);
+  scene.add(sprite);
+  return sprite;
+}
+
+// ── 1. Motor Axon (myelinated) ──
+// Cylindrical axon coming from left, with myelin segments
+var AXON_RADIUS = 1.2;
+var AXON_LENGTH = 16;
+var axonGeo = new THREE.CylinderGeometry(AXON_RADIUS, AXON_RADIUS, AXON_LENGTH, 24, 1, false);
+var axonMat = new THREE.MeshPhongMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.85, shininess: 60 });
+var axon = new THREE.Mesh(axonGeo, axonMat);
+axon.rotation.z = Math.PI / 2;
+axon.position.set(-AXON_LENGTH/2 + 2, 4, 0);
+scene.add(axon);
+
+// Myelin sheath segments
+var myelinGroup = new THREE.Group();
+var myelinCount = 5;
+var myelinSegLen = 2.2;
+var myelinGap = 0.5;
+for (var mi = 0; mi < myelinCount; mi++) {
+  var mg = new THREE.CylinderGeometry(AXON_RADIUS + 0.5, AXON_RADIUS + 0.5, myelinSegLen, 20);
+  var mm = new THREE.MeshPhongMaterial({ color: 0xc4b5fd, transparent: true, opacity: 0.3, shininess: 30 });
+  var msh = new THREE.Mesh(mg, mm);
+  msh.rotation.z = Math.PI / 2;
+  msh.position.set(-AXON_LENGTH + 4 + mi * (myelinSegLen + myelinGap) + myelinSegLen/2, 4, 0);
+  myelinGroup.add(msh);
+}
+scene.add(myelinGroup);
+
+// Axon label
+makeLabel('Motor Axon\n(myelinated)', '#a78bfa', 6).position.set(-12, 7, 0);
+
+// ── 2. Axon Terminal (bouton) ──
+// Spherical swelling at the end of the axon, sitting above the cleft
+var TERM_RADIUS = 4.5;
+var terminalGeo = new THREE.SphereGeometry(TERM_RADIUS, 32, 24);
+var terminalMat = new THREE.MeshPhongMaterial({
+  color: 0xa78bfa, transparent: true, opacity: 0.6, shininess: 50,
+  side: THREE.DoubleSide
+});
+var terminal = new THREE.Mesh(terminalGeo, terminalMat);
+terminal.position.set(2, 4, 0);
+terminal.scale.set(1.3, 0.9, 1.1);
+scene.add(terminal);
+
+makeLabel('Axon Terminal\n(bouton)', '#a78bfa', 6).position.set(2, 9, 3);
+
+// ── 3. Synaptic Vesicles (ACh-containing) ──
+// Clusters of small spheres inside the terminal near the active zone
+var VESICLE_RADIUS = 0.35;
+var VESICLE_COUNT = 24;
+var vesicles = [];
+var vesicleGeo = new THREE.SphereGeometry(VESICLE_RADIUS, 12, 10);
+var vesicleMat = new THREE.MeshPhongMaterial({ color: 0xfbbf24, emissive: 0x4a3000, shininess: 40 });
+
+// Active zone is at the bottom of the terminal (y ≈ 4 - 4 = 0, but terminal scale.y=0.9 so bottom ≈ 0.4)
+var ACTIVE_ZONE_Y = 0.8;
+for (var vi = 0; vi < VESICLE_COUNT; vi++) {
+  var vm = new THREE.Mesh(vesicleGeo, vesicleMat.clone());
+  // Distribute in a cluster near active zone
+  var angle = (vi / VESICLE_COUNT) * Math.PI * 2 + Math.random() * 0.3;
+  var ring = Math.floor(vi / 8);
+  var r = 1.5 + ring * 0.8;
+  vm.position.set(
+    2 + Math.cos(angle) * r * 0.6 + (Math.random()-0.5) * 1.5,
+    ACTIVE_ZONE_Y + 0.5 + ring * 0.6 + Math.random() * 0.8,
+    Math.sin(angle) * r * 0.4 + (Math.random()-0.5) * 1.0
+  );
+  vm.userData = {
+    basePos: vm.position.clone(),
+    state: 'docked',  // docked, fusing, released, recycling
+    fuseTime: 0,
+    targetPos: null,
+  };
+  vesicles.push(vm);
+  scene.add(vm);
+}
+makeLabel('Synaptic\nVesicles (ACh)', '#fbbf24', 5).position.set(6, 4, 3);
+
+// ── 4. Voltage-gated Ca²⁺ Channels (presynaptic) ──
+// Small cylinders at the active zone (bottom of terminal)
+var caChannels = [];
+var caChannelGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.6, 8);
+var caChannelMat = new THREE.MeshPhongMaterial({ color: 0x1e3a8a, emissive: 0x0a1a4a });
+for (var ci = 0; ci < 6; ci++) {
+  var cm = new THREE.Mesh(caChannelGeo, caChannelMat.clone());
+  cm.position.set(2 + (ci - 2.5) * 1.2, ACTIVE_ZONE_Y - 0.1, (Math.random()-0.5) * 2);
+  cm.userData = { active: false, glowTime: 0 };
+  caChannels.push(cm);
+  scene.add(cm);
+}
+makeLabel('Voltage-gated\nCa²⁺ Channel', '#3b82f6', 5).position.set(7, 0.5, 2.5);
+
+// ── 5. Synaptic Cleft ──
+// Thin translucent region between terminal and muscle fibre
+var CLEFT_THICKNESS = 1.5;  // represents ~50 nm in real life
+var cleftGeo = new THREE.BoxGeometry(12, CLEFT_THICKNESS, 7);
+var cleftMat = new THREE.MeshBasicMaterial({
+  color: 0x3b82f6, transparent: true, opacity: 0.06, side: THREE.DoubleSide
+});
+var cleft = new THREE.Mesh(cleftGeo, cleftMat);
+cleft.position.set(2, 0, 0);
+scene.add(cleft);
+
+// Basal lamina (thin line in cleft)
+var blGeo = new THREE.BoxGeometry(12, 0.08, 7);
+var blMat = new THREE.MeshBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.3 });
+var bl = new THREE.Mesh(blGeo, blMat);
+bl.position.set(2, 0, 0);
+scene.add(bl);
+
+makeLabel('Synaptic Cleft\n(~50 nm)', '#3b82f6', 5).position.set(10, 0, 3);
+
+// ── 6. Motor End Plate (muscle fibre membrane with junctional folds) ──
+// Large rounded block below the cleft representing the muscle fibre
+var MUSCLE_Y = -3;
+var muscleGeo = new THREE.CylinderGeometry(5, 5.5, 8, 32, 1, false);
+var muscleMat = new THREE.MeshPhongMaterial({ color: 0xb91c1c, transparent: true, opacity: 0.35, shininess: 20 });
+var muscle = new THREE.Mesh(muscleGeo, muscleMat);
+muscle.rotation.x = Math.PI / 2;
+muscle.position.set(2, MUSCLE_Y - 2, 0);
+muscle.scale.set(1.6, 1, 1.1);
+scene.add(muscle);
+
+// Sarcolemma surface (top of muscle facing cleft)
+var sarcGeo = new THREE.BoxGeometry(13, 0.3, 7.5);
+var sarcMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.4 });
+var sarc = new THREE.Mesh(sarcGeo, sarcMat);
+sarc.position.set(2, MUSCLE_Y, 0);
+scene.add(sarc);
+
+makeLabel('Sarcolemma\n(muscle fibre membrane)', '#94a3b8', 6).position.set(12, MUSCLE_Y, 3);
+
+// Junctional folds (invaginations of sarcolemma)
+var folds = [];
+var FOLD_COUNT = 5;
+var foldGeo = new THREE.BoxGeometry(1.0, 2.0, 4.5);
+var foldMat = new THREE.MeshPhongMaterial({ color: 0xf87171, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+for (var fi = 0; fi < FOLD_COUNT; fi++) {
+  var fm = new THREE.Mesh(foldGeo, foldMat.clone());
+  fm.position.set(2 + (fi - 2) * 2.4, MUSCLE_Y - 1.0, 0);
+  folds.push(fm);
+  scene.add(fm);
+}
+makeLabel('Junctional\nFolds', '#f87171', 5).position.set(-2, MUSCLE_Y - 2, 4);
+
+// ── 7. Nicotinic ACh Receptors (nAChR) ──
+// Placed at the tops of junctional folds and on the flat sarcolemma
+var NACHR_COUNT = 12;
+var nachrs = [];
+var nachrGeo = new THREE.CylinderGeometry(0.28, 0.22, 0.7, 12);
+var nachrMat = new THREE.MeshPhongMaterial({ color: 0x22c55e, emissive: 0x06280d, shininess: 50 });
+for (var ri = 0; ri < NACHR_COUNT; ri++) {
+  var rm = new THREE.Mesh(nachrGeo, nachrMat.clone());
+  // 7 on fold tops, 5 on flat sarcolemma between folds
+  if (ri < 7) {
+    var foldIdx = ri % FOLD_COUNT;
+    rm.position.set(2 + (foldIdx - 2) * 2.4 + (ri >= 5 ? 1.0 : 0), MUSCLE_Y + 0.1, (ri % 3 - 1) * 1.5);
+  } else {
+    rm.position.set(2 + (ri - 7 - 2) * 2.0 + 1, MUSCLE_Y + 0.15, (ri % 2 ? 2 : -2));
+  }
+  rm.userData = { activated: false, activationTime: 0, baseColor: 0x22c55e };
+  nachrs.push(rm);
+  scene.add(rm);
+}
+makeLabel('nAChR\n(nicotinic receptor)', '#22c55e', 5).position.set(-3, MUSCLE_Y + 0.5, 4);
+
+// ── 8. Acetylcholinesterase (AChE) ──
+// Small red cones in the basal lamina / cleft
+var ACH_E_COUNT = 8;
+var acheEnzymes = [];
+var acheGeo = new THREE.ConeGeometry(0.22, 0.6, 8);
+var acheMat = new THREE.MeshPhongMaterial({ color: 0xef4444, emissive: 0x4a0000, shininess: 30 });
+for (var ai = 0; ai < ACH_E_COUNT; ai++) {
+  var am = new THREE.Mesh(acheGeo, acheMat.clone());
+  am.position.set(2 + (ai - 3.5) * 1.4, 0.1 + Math.random() * 0.6, (ai % 2 ? 1.8 : -1.8) + Math.random()*0.5);
+  am.userData = { active: false, glowTime: 0 };
+  acheEnzymes.push(am);
+  scene.add(am);
+}
+makeLabel('AChE\n(acetylcholinesterase)', '#ef4444', 5).position.set(10, 1.5, 4);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PARTICLE SYSTEMS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── ACh molecules ──
+var achParticles = [];
+var achGeo = new THREE.SphereGeometry(0.16, 8, 6);
+var achMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.9 });
+
+function spawnACh(originPos) {
+  var p = new THREE.Mesh(achGeo, achMat.clone());
+  p.position.copy(originPos);
+  scene.add(p);
+  achParticles.push({
+    mesh: p,
+    vx: (Math.random() - 0.5) * 1.5,
+    vy: -2.5 - Math.random() * 1.5,
+    vz: (Math.random() - 0.5) * 1.5,
+    age: 0,
+    state: 'diffusing',  // diffusing → bound → degraded
+    boundReceptor: null,
+    boundTime: 0,
+    degradeTime: 0,
+  });
+}
+
+// ── Ca²⁺ ions ──
+var caParticles = [];
+var caIonGeo = new THREE.SphereGeometry(0.12, 8, 6);
+var caIonMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.95 });
+
+function spawnCalciumIon(channelPos) {
+  var p = new THREE.Mesh(caIonGeo, caIonMat.clone());
+  // Spawn slightly outside channel (below it, into terminal)
+  p.position.set(channelPos.x + (Math.random()-0.5)*0.3, channelPos.y + 0.3, channelPos.z + (Math.random()-0.5)*0.3);
+  scene.add(p);
+  caParticles.push({
+    mesh: p,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: 1.0 + Math.random() * 0.8,
+    vz: (Math.random() - 0.5) * 0.5,
+    age: 0,
+    life: 2.5,
+  });
+}
+
+// ── Degradation products (choline + acetate) ──
+var degParticles = [];
+var degGeo = new THREE.SphereGeometry(0.10, 6, 5);
+var degMat = new THREE.MeshBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.7 });
+
+function spawnDegradation(pos) {
+  for (var d = 0; d < 2; d++) {
+    var p = new THREE.Mesh(degGeo, degMat.clone());
+    p.position.copy(pos);
+    scene.add(p);
+    degParticles.push({
+      mesh: p,
+      vx: (Math.random()-0.5) * 2,
+      vy: 0.5 + Math.random() * 1.5,
+      vz: (Math.random()-0.5) * 2,
+      age: 0,
+      life: 1.5,
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PHYSIOLOGY STATE MACHINE
+// ═══════════════════════════════════════════════════════════════════════════
+
+var PHASES = {
+  RESTING:       { name: 'RESTING',       color: '#64748b', step: 'Awaiting action potential' },
+  AP_ARRIVAL:    { name: 'AP ARRIVAL',    color: '#fbbf24', step: 'Depolarisation reaches terminal' },
+  CA_INFLUX:     { name: 'Ca²⁺ INFLUX',   color: '#3b82f6', step: 'VG Ca²⁺ channels open' },
+  EXOCYTOSIS:    { name: 'EXOCYTOSIS',    color: '#fbbf24', step: 'Vesicle fusion → ACh release' },
+  DIFFUSION:     { name: 'DIFFUSION',     color: '#22d3ee', step: 'ACh crosses synaptic cleft' },
+  BINDING:       { name: 'RECEPTOR BINDING', color: '#22c55e', step: 'ACh binds nAChR' },
+  EPP_GENERATION:{ name: 'EPP GENERATION', color: '#22c55e', step: 'End-plate potential rising' },
+  AP_MUSCLE:     { name: 'MUSCLE AP',     color: '#ef4444', step: 'EPP threshold → muscle AP' },
+  DEGRADATION:   { name: 'DEGRADATION',   color: '#ef4444', step: 'AChE degrades ACh' },
+  RELAXATION:    { name: 'RELAXATION',    color: '#64748b', step: 'Receptors close, membrane resets' },
+};
+
+var phys = {
+  phase: 'RESTING',
+  phaseTimer: 0,
+  stimLevel: 0,        // 0–100 slider
+  simSpeed: 1.0,
+  playing: true,
+  elapsed: 0,
+
+  // Physiology variables
+  caPre: 0.10,         // presynaptic [Ca²⁺] µmol/L
+  vesiclesReleased: 0,
+  achConc: 0.0,        // µmol/L in cleft
+  receptorsActivated: 0,
+  epp: 0.0,            // mV
+  vm: -90.0,           // membrane potential mV
+  acheActivity: 0,
+  muscleAPs: 0,
+
+  // Trace
+  vmHistory: [],
+  VM_HIST_LEN: 300,
+
+  // Single AP trigger
+  apTriggered: false,
+  apFired: false,
+
+  // Continuous firing
+  stimAccumulator: 0,
+};
+
+var TIPS = {
+  RESTING:        '⚪ Resting state — membrane potential at −90 mV. Vesicles docked at active zone.',
+  AP_ARRIVAL:     '⚡ Action potential arrives at the axon terminal — depolarisation of the bouton membrane.',
+  CA_INFLUX:      '🔵 Voltage-gated Ca²⁺ channels open — Ca²⁺ flows INTO the presynaptic terminal (down its electrochemical gradient).',
+  EXOCYTOSIS:     '🟡 [Ca²⁺] rise triggers SNARE-mediated vesicle fusion — ~200 vesicles release ACh into the cleft via exocytosis.',
+  DIFFUSION:      '🟦 ~10,000 ACh molecules diffuse across the 50 nm cleft in <100 µs.',
+  BINDING:        '🟢 ACh binds nicotinic receptors (nAChR) on the motor end plate — ligand-gated Na⁺ channel opens.',
+  EPP_GENERATION: '🟢 Na⁺ influx creates the end-plate potential (EPP) — a local depolarisation that spreads electrotonically.',
+  AP_MUSCLE:      '🔴 EPP reaches threshold (−55 mV) → voltage-gated Na⁺ channels fire → muscle action potential propagates along sarcolemma.',
+  DEGRADATION:    '🔴 AChE in the basal lamina hydrolyses ACh → choline + acetate. Choline is recycled back into the terminal.',
+  RELAXATION:     '⚪ nAChR channels close — K⁺ efflux + Na⁺/K⁺ pump restore resting potential. Vesicles recycled via endocytosis.',
+};
+
+var lastPhase = 'RESTING';
+function setPhase(newPhase) {
+  if (phys.phase === newPhase) return;
+  phys.phase = newPhase;
+  phys.phaseTimer = 0;
+  var p = PHASES[newPhase];
+  document.getElementById('phase-name').textContent = p.name;
+  document.getElementById('phase-name').style.color = p.color;
+  document.getElementById('phase-step').textContent = p.step;
+  if (TIPS[newPhase]) showTip(TIPS[newPhase]);
+}
+
+var tipTimer = 0;
+function showTip(text) {
+  var bar = document.getElementById('tip-bar');
+  document.getElementById('tip-text').textContent = text;
+  bar.classList.add('show');
+  tipTimer = 4.5;  // seconds visible
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SIMULATION LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+function fireAP() {
+  if (phys.phase === 'RESTING' || phys.phase === 'RELAXATION') {
+    phys.apTriggered = true;
+    phys.apFired = false;
+    setPhase('AP_ARRIVAL');
+  }
+}
+
+function updatePhysiology(dt) {
+  phys.elapsed += dt;
+  phys.phaseTimer += dt;
+
+  // ── Continuous stimulation from slider ──
+  if (phys.stimLevel > 5) {
+    phys.stimAccumulator += dt * (phys.stimLevel / 100) * 3;  // Hz scaling
+    if (phys.stimAccumulator > 1.0 && (phys.phase === 'RESTING' || phys.phase === 'RELAXATION')) {
+      phys.stimAccumulator = 0;
+      fireAP();
+    }
+  } else {
+    phys.stimAccumulator = 0;
+  }
+
+  // ── Phase machine ──
+  switch (phys.phase) {
+
+    case 'RESTING':
+      // Slowly decay everything; ensure full reset
+      phys.caPre = Math.max(0.10, phys.caPre - 0.3 * dt);
+      phys.achConc = Math.max(0, phys.achConc - 5 * dt);
+      phys.epp = Math.max(0, phys.epp - 8 * dt);
+      phys.vm = Math.min(-90, phys.vm + (-90 - phys.vm) * dt * 3);
+      // Force-reset any stuck receptors
+      for (var ri0 = 0; ri0 < nachrs.length; ri0++) {
+        if (nachrs[ri0].userData.activated) {
+          nachrs[ri0].userData.activated = false;
+          nachrs[ri0].material.color.setHex(0x22c55e);
+          nachrs[ri0].material.emissive.setHex(0x06280d);
+          nachrs[ri0].scale.set(1, 1, 1);
+        }
+      }
+      phys.receptorsActivated = 0;
+      break;
+
+    case 'AP_ARRIVAL':
+      // Very brief — depolarisation arriving
+      if (phys.phaseTimer > 0.3) {
+        setPhase('CA_INFLUX');
+      }
+      break;
+
+    case 'CA_INFLUX':
+      // Open Ca channels, Ca²⁺ flows in
+      for (var ci2 = 0; ci2 < caChannels.length; ci2++) {
+        caChannels[ci2].userData.active = true;
+        caChannels[ci2].userData.glowTime = 0.5;
+        // Spawn Ca ions
+        if (Math.random() < dt * 8) {
+          spawnCalciumIon(caChannels[ci2].position);
+        }
+      }
+      phys.caPre = Math.min(100, phys.caPre + 40 * dt);
+      if (phys.caPre > 20 && phys.phaseTimer > 0.4) {
+        setPhase('EXOCYTOSIS');
+      }
+      break;
+
+    case 'EXOCYTOSIS':
+      // Vesicle fusion — release ACh
+      var releaseCount = 0;
+      for (var vi2 = 0; vi2 < vesicles.length; vi2++) {
+        var v = vesicles[vi2];
+        if (v.userData.state === 'docked' && Math.random() < dt * 4) {
+          v.userData.state = 'fusing';
+          v.userData.fuseTime = 0;
+          releaseCount++;
+        }
+        if (v.userData.state === 'fusing') {
+          v.userData.fuseTime += dt;
+          // Move vesicle downward (toward cleft) and shrink
+          v.position.y -= dt * 2.5;
+          v.scale.setScalar(Math.max(0.1, 1 - v.userData.fuseTime * 3));
+          v.material.opacity = Math.max(0, 1 - v.userData.fuseTime * 2.5);
+          v.material.transparent = true;
+          // Spawn ACh particles
+          if (Math.random() < dt * 15) {
+            spawnACh(v.position);
+          }
+          if (v.userData.fuseTime > 0.5) {
+            v.userData.state = 'released';
+            phys.vesiclesReleased++;
+          }
+        }
+      }
+      phys.achConc = Math.min(500, phys.achConc + 80 * dt);
+      if (phys.phaseTimer > 0.6) {
+        setPhase('DIFFUSION');
+      }
+      break;
+
+    case 'DIFFUSION':
+      // ACh diffusing across cleft
+      phys.achConc = Math.min(500, phys.achConc + 30 * dt);
+      if (phys.phaseTimer > 0.3) {
+        setPhase('BINDING');
+      }
+      break;
+
+    case 'BINDING':
+      // ACh binds to nAChR — aggressive binding (high safety factor)
+      for (var ri2 = 0; ri2 < nachrs.length; ri2++) {
+        var r = nachrs[ri2];
+        if (!r.userData.activated && phys.achConc > 10 && Math.random() < dt * 8) {
+          r.userData.activated = true;
+          r.userData.activationTime = 0;
+          r.material.color.setHex(0x86efac);
+          r.material.emissive.setHex(0x06280d);
+        }
+        if (r.userData.activated) {
+          r.userData.activationTime += dt;
+          // Pulse effect
+          var pulse = 1 + Math.sin(r.userData.activationTime * 15) * 0.15;
+          r.scale.set(pulse, pulse, pulse);
+        }
+      }
+      phys.receptorsActivated = nachrs.filter(function(r) { return r.userData.activated; }).length;
+      if (phys.receptorsActivated >= 3 || phys.phaseTimer > 0.4) {
+        setPhase('EPP_GENERATION');
+      }
+      break;
+
+    case 'EPP_GENERATION':
+      // Continue binding remaining receptors (ACh still in cleft)
+      for (var ri2b = 0; ri2b < nachrs.length; ri2b++) {
+        var rb = nachrs[ri2b];
+        if (!rb.userData.activated && phys.achConc > 20 && Math.random() < dt * 6) {
+          rb.userData.activated = true;
+          rb.userData.activationTime = 0;
+          rb.material.color.setHex(0x86efac);
+          rb.material.emissive.setHex(0x06280d);
+        }
+        if (rb.userData.activated) {
+          rb.userData.activationTime += dt;
+          var pulse2 = 1 + Math.sin(rb.userData.activationTime * 15) * 0.15;
+          rb.scale.set(pulse2, pulse2, pulse2);
+        }
+      }
+      phys.receptorsActivated = nachrs.filter(function(r) { return r.userData.activated; }).length;
+
+      // EPP builds up — safety factor ensures threshold is normally reached
+      var receptorFraction = phys.receptorsActivated / NACHR_COUNT;
+      phys.epp = Math.min(70, phys.epp + 120 * receptorFraction * dt);
+      // Membrane depolarises
+      phys.vm = -90 + phys.epp;
+      if (phys.vm > -55 && !phys.apFired) {
+        phys.apFired = true;
+        phys.muscleAPs++;
+        setPhase('AP_MUSCLE');
+      }
+      break;
+
+    case 'AP_MUSCLE':
+      // Muscle AP fires — rapid depolarisation then repolarisation
+      if (phys.phaseTimer < 0.15) {
+        phys.vm = Math.min(30, phys.vm + 300 * dt);
+      } else if (phys.phaseTimer < 0.4) {
+        phys.vm = Math.max(-90, phys.vm - 200 * dt);
+      } else {
+        phys.vm = Math.min(-90, phys.vm + (-90 - phys.vm) * dt * 5);
+      }
+      if (phys.phaseTimer > 0.6) {
+        setPhase('DEGRADATION');
+      }
+      break;
+
+    case 'DEGRADATION':
+      // AChE degrades ACh
+      for (var ei = 0; ei < acheEnzymes.length; ei++) {
+        var e = acheEnzymes[ei];
+        e.userData.active = true;
+        e.userData.glowTime = 0.3;
+      }
+      phys.acheActivity = Math.min(100, phys.acheActivity + 50 * dt);
+      phys.achConc = Math.max(0, phys.achConc - 120 * dt);
+
+      // Deactivate receptors as ACh is degraded
+      if (phys.achConc < 50) {
+        for (var ri3 = 0; ri3 < nachrs.length; ri3++) {
+          var rr = nachrs[ri3];
+          if (rr.userData.activated && Math.random() < dt * 2) {
+            rr.userData.activated = false;
+            rr.material.color.setHex(0x22c55e);
+            rr.material.emissive.setHex(0x06280d);
+            rr.scale.set(1, 1, 1);
+          }
+        }
+        phys.receptorsActivated = nachrs.filter(function(r) { return r.userData.activated; }).length;
+      }
+
+      if (phys.achConc < 1 && phys.phaseTimer > 1.0) {
+        setPhase('RELAXATION');
+      }
+      break;
+
+    case 'RELAXATION':
+      // Reset everything
+      phys.epp = Math.max(0, phys.epp - 10 * dt);
+      phys.vm = Math.min(-90, phys.vm + (-90 - phys.vm) * dt * 4);
+      phys.acheActivity = Math.max(0, phys.acheActivity - 30 * dt);
+      phys.caPre = Math.max(0.10, phys.caPre - 2 * dt);
+
+      // Recycle vesicles
+      for (var vi3 = 0; vi3 < vesicles.length; vi3++) {
+        var vv = vesicles[vi3];
+        if (vv.userData.state === 'released') {
+          // Slowly regenerate
+          vv.userData.state = 'docked';
+          vv.position.copy(vv.userData.basePos);
+          vv.scale.setScalar(1);
+          vv.material.opacity = 1;
+        }
+      }
+      phys.vesiclesReleased = 0;
+
+      if (phys.phaseTimer > 1.5) {
+        phys.apTriggered = false;
+        phys.apFired = false;
+        setPhase('RESTING');
+      }
+      break;
+  }
+
+  // ── VM history for trace ──
+  phys.vmHistory.push(phys.vm);
+  if (phys.vmHistory.length > phys.VM_HIST_LEN) phys.vmHistory.shift();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PARTICLE UPDATES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateParticles(dt) {
+  // ── ACh molecules ──
+  for (var i = achParticles.length - 1; i >= 0; i--) {
+    var p = achParticles[i];
+    p.age += dt;
+
+    if (p.state === 'diffusing') {
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      // Slow down (diffusion)
+      p.vx *= 0.96; p.vy *= 0.96; p.vz *= 0.96;
+
+      // Check if near a receptor
+      for (var j = 0; j < nachrs.length; j++) {
+        var r = nachrs[j];
+        if (!r.userData.activated) {
+          var dist = p.mesh.position.distanceTo(r.position);
+          if (dist < 0.6) {
+            // Bind!
+            p.state = 'bound';
+            p.boundReceptor = r;
+            p.boundTime = 0;
+            p.mesh.position.copy(r.position);
+            p.mesh.position.y += 0.3;
+            p.vx = p.vy = p.vz = 0;
+            break;
+          }
+        }
+      }
+
+      // Check if near AChE
+      for (var k = 0; k < acheEnzymes.length; k++) {
+        var e = acheEnzymes[k];
+        var distE = p.mesh.position.distanceTo(e.position);
+        if (distE < 0.5) {
+          // Degrade!
+          p.state = 'degraded';
+          p.degradeTime = 0;
+          spawnDegradation(p.mesh.position);
+          e.userData.active = true;
+          e.userData.glowTime = 0.4;
+          break;
+        }
+      }
+
+      // Remove if too old or went too far
+      if (p.age > 4 || p.mesh.position.y < MUSCLE_Y - 1) {
+        scene.remove(p.mesh);
+        achParticles.splice(i, 1);
+      }
+    } else if (p.state === 'bound') {
+      p.boundTime += dt;
+      // Stay near receptor, slight oscillation
+      p.mesh.position.x = p.boundReceptor.position.x + Math.sin(p.boundTime * 8) * 0.1;
+      p.mesh.position.y = p.boundReceptor.position.y + 0.3;
+      p.mesh.position.z = p.boundReceptor.position.z + Math.cos(p.boundTime * 8) * 0.1;
+      p.mesh.material.opacity = Math.max(0.3, 0.9 - p.boundTime * 0.3);
+
+      // After some time, AChE degrades bound ACh
+      if (p.boundTime > 1.5) {
+        p.state = 'degraded';
+        p.degradeTime = 0;
+        spawnDegradation(p.mesh.position);
+      }
+    } else if (p.state === 'degraded') {
+      p.degradeTime += dt;
+      p.mesh.material.opacity = Math.max(0, 0.5 - p.degradeTime * 2);
+      p.mesh.scale.setScalar(Math.max(0.01, 1 - p.degradeTime * 2));
+      if (p.degradeTime > 0.5) {
+        scene.remove(p.mesh);
+        achParticles.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Ca²⁺ ions ──
+  for (var ci = caParticles.length - 1; ci >= 0; ci--) {
+    var cp = caParticles[ci];
+    cp.age += dt;
+    cp.mesh.position.x += cp.vx * dt;
+    cp.mesh.position.y += cp.vy * dt;
+    cp.mesh.position.z += cp.vz * dt;
+    cp.vy *= 0.95;
+    cp.mesh.material.opacity = Math.max(0, 0.95 - cp.age / cp.life);
+
+    if (cp.age > cp.life) {
+      scene.remove(cp.mesh);
+      caParticles.splice(ci, 1);
+    }
+  }
+
+  // ── Degradation products ──
+  for (var di = degParticles.length - 1; di >= 0; di--) {
+    var dp = degParticles[di];
+    dp.age += dt;
+    dp.mesh.position.x += dp.vx * dt;
+    dp.mesh.position.y += dp.vy * dt;
+    dp.mesh.position.z += dp.vz * dt;
+    dp.mesh.material.opacity = Math.max(0, 0.7 - dp.age / dp.life);
+
+    if (dp.age > dp.life) {
+      scene.remove(dp.mesh);
+      degParticles.splice(di, 1);
+    }
+  }
+
+  // ── Ca channel glow ──
+  for (var cch = 0; cch < caChannels.length; cch++) {
+    var ch = caChannels[cch];
+    if (ch.userData.glowTime > 0) {
+      ch.userData.glowTime -= dt;
+      ch.material.emissive.setHex(0x1a3a8a);
+      ch.material.color.setHex(0x3b82f6);
+    } else {
+      ch.material.emissive.setHex(0x0a1a4a);
+      ch.material.color.setHex(0x1e3a8a);
+    }
+  }
+
+  // ── AChE glow ──
+  for (var ae = 0; ae < acheEnzymes.length; ae++) {
+    var aeM = acheEnzymes[ae];
+    if (aeM.userData.glowTime > 0) {
+      aeM.userData.glowTime -= dt;
+      aeM.material.emissive.setHex(0x8a0000);
+      aeM.material.color.setHex(0xfb7185);
+      var sp = 1 + Math.sin(aeM.userData.glowTime * 20) * 0.2;
+      aeM.scale.set(sp, sp, sp);
+    } else {
+      aeM.material.emissive.setHex(0x4a0000);
+      aeM.material.color.setHex(0xef4444);
+      aeM.scale.set(1, 1, 1);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HUD UPDATES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateHUD() {
+  document.getElementById('rd-ca').textContent = phys.caPre.toFixed(2);
+  document.getElementById('rd-ves').textContent = phys.vesiclesReleased;
+  document.getElementById('rd-ach').textContent = phys.achConc.toFixed(1);
+  document.getElementById('rd-receptors').textContent = phys.receptorsActivated + ' / ' + NACHR_COUNT;
+  document.getElementById('rd-epp').textContent = phys.epp.toFixed(1);
+  document.getElementById('rd-vm').textContent = (phys.vm >= 0 ? '+' : '') + phys.vm.toFixed(1);
+  document.getElementById('rd-ache').textContent = phys.acheActivity.toFixed(0);
+  document.getElementById('rd-ap').textContent = phys.muscleAPs;
+}
+
+// ── Trace canvas ──
+var traceCanvas = document.getElementById('trace-canvas');
+var traceCtx = traceCanvas.getContext('2d');
+function resizeTrace() {
+  traceCanvas.width = traceCanvas.offsetWidth * 2;
+  traceCanvas.height = traceCanvas.offsetHeight * 2;
+  traceCtx.scale(2, 2);
+}
+resizeTrace();
+
+function drawTrace() {
+  var w = traceCanvas.offsetWidth;
+  var h = traceCanvas.offsetHeight;
+  traceCtx.clearRect(0, 0, w, h);
+
+  // Grid
+  traceCtx.strokeStyle = '#1e293b';
+  traceCtx.lineWidth = 0.5;
+  for (var g = 0; g <= 4; g++) {
+    var gy = (g / 4) * h;
+    traceCtx.beginPath();
+    traceCtx.moveTo(0, gy);
+    traceCtx.lineTo(w, gy);
+    traceCtx.stroke();
+  }
+
+  // Threshold line (-55 mV)
+  var threshY = h * (1 - (-55 + 100) / 130);
+  traceCtx.strokeStyle = '#ef4444';
+  traceCtx.setLineDash([3, 3]);
+  traceCtx.lineWidth = 1;
+  traceCtx.beginPath();
+  traceCtx.moveTo(0, threshY);
+  traceCtx.lineTo(w, threshY);
+  traceCtx.stroke();
+  traceCtx.setLineDash([]);
+
+  // Threshold label
+  traceCtx.fillStyle = '#ef4444';
+  traceCtx.font = '8px monospace';
+  traceCtx.fillText('−55 mV', w - 38, threshY - 3);
+
+  // Trace line
+  if (phys.vmHistory.length > 1) {
+    traceCtx.strokeStyle = '#22d3ee';
+  traceCtx.lineWidth = 1.5;
+  traceCtx.beginPath();
+    for (var i = 0; i < phys.vmHistory.length; i++) {
+      var x = (i / phys.VM_HIST_LEN) * w;
+      // Map -90..+30 mV to h..0
+      var y = h * (1 - (phys.vmHistory[i] + 90) / 120);
+      if (i === 0) traceCtx.moveTo(x, y);
+      else traceCtx.lineTo(x, y);
+    }
+    traceCtx.stroke();
+
+    // Fill under curve
+    traceCtx.lineTo((phys.vmHistory.length / phys.VM_HIST_LEN) * w, h);
+    traceCtx.lineTo(0, h);
+    traceCtx.closePath();
+    traceCtx.fillStyle = 'rgba(34,211,238,0.08)';
+    traceCtx.fill();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CAMERA / ORBIT CONTROLS
+// ═══════════════════════════════════════════════════════════════════════════
+var camRadius = 32;
+var camTheta = 0.6;   // azimuth
+var camPhi = 0.35;    // elevation
+var targetTheta = camTheta, targetPhi = camPhi, targetRadius = camRadius;
+var camTarget = new THREE.Vector3(2, 0, 0);
+
+var isDragging = false;
+var lastMouseX = 0, lastMouseY = 0;
+
+renderer.domElement.addEventListener('mousedown', function(e) {
+  isDragging = true;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+});
+window.addEventListener('mousemove', function(e) {
+  if (!isDragging) return;
+  var dx = e.clientX - lastMouseX;
+  var dy = e.clientY - lastMouseY;
+  targetTheta -= dx * 0.005;
+  targetPhi += dy * 0.005;
+  targetPhi = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, targetPhi));
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+});
+window.addEventListener('mouseup', function() { isDragging = false; });
+
+renderer.domElement.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  targetRadius += e.deltaY * 0.02;
+  targetRadius = Math.max(12, Math.min(60, targetRadius));
+});
+
+// Touch support
+var lastTouchX = 0, lastTouchY = 0, lastTouchDist = 0;
+renderer.domElement.addEventListener('touchstart', function(e) {
+  if (e.touches.length === 1) {
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    var dx = e.touches[0].clientX - e.touches[1].clientX;
+    var dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastTouchDist = Math.sqrt(dx*dx + dy*dy);
+  }
+});
+renderer.domElement.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    var dx = e.touches[0].clientX - lastTouchX;
+    var dy = e.touches[0].clientY - lastTouchY;
+    targetTheta -= dx * 0.005;
+    targetPhi += dy * 0.005;
+    targetPhi = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, targetPhi));
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    var ddx = e.touches[0].clientX - e.touches[1].clientX;
+    var ddy = e.touches[0].clientY - e.touches[1].clientY;
+    var dist = Math.sqrt(ddx*ddx + ddy*ddy);
+    targetRadius += (lastTouchDist - dist) * 0.03;
+    targetRadius = Math.max(12, Math.min(60, targetRadius));
+    lastTouchDist = dist;
+  }
+}, { passive: false });
+
+function updateCamera(dt) {
+  camTheta += (targetTheta - camTheta) * dt * 5;
+  camPhi += (targetPhi - camPhi) * dt * 5;
+  camRadius += (targetRadius - camRadius) * dt * 5;
+
+  camera.position.x = camTarget.x + camRadius * Math.cos(camPhi) * Math.cos(camTheta);
+  camera.position.y = camTarget.y + camRadius * Math.sin(camPhi);
+  camera.position.z = camTarget.z + camRadius * Math.cos(camPhi) * Math.sin(camTheta);
+  camera.lookAt(camTarget);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UI EVENT HANDLERS
+// ═══════════════════════════════════════════════════════════════════════════
+var started = false;
+document.getElementById('start-btn').addEventListener('click', function() {
+  document.getElementById('start-overlay').classList.add('hidden');
+  started = true;
+});
+
+document.getElementById('stim-slider').addEventListener('input', function(e) {
+  phys.stimLevel = parseInt(e.target.value);
+  document.getElementById('stim-val').textContent = phys.stimLevel + ' Hz';
+});
+
+document.getElementById('speed-slider').addEventListener('input', function(e) {
+  phys.simSpeed = parseInt(e.target.value) / 100;
+  document.getElementById('speed-val').textContent = phys.simSpeed.toFixed(1) + '×';
+});
+
+document.getElementById('btn-fire').addEventListener('click', function() {
+  if (started) fireAP();
+});
+
+document.getElementById('btn-labels').addEventListener('click', function(e) {
+  showLabels = !showLabels;
+  for (var i = 0; i < LABELS.length; i++) LABELS[i].visible = showLabels;
+  e.target.classList.toggle('active', showLabels);
+});
+
+document.getElementById('btn-legend').addEventListener('click', function(e) {
+  var leg = document.getElementById('legend');
+  leg.classList.toggle('show');
+  e.target.classList.toggle('active', leg.classList.contains('show'));
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ANIMATION LOOP
+// ═══════════════════════════════════════════════════════════════════════════
+var lastTime = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  var now = performance.now();
+  var dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (started && phys.playing) {
+    var simDt = dt * phys.simSpeed;
+    updatePhysiology(simDt);
+    updateParticles(simDt);
+  }
+
+  updateCamera(dt);
+
+  // Tip bar timer
+  if (tipTimer > 0) {
+    tipTimer -= dt;
+    if (tipTimer <= 0) {
+      document.getElementById('tip-bar').classList.remove('show');
+    }
+  }
+
+  updateHUD();
+  drawTrace();
+
+  // Subtle idle rotation when not interacting
+  if (!isDragging && phys.phase === 'RESTING') {
+    targetTheta += dt * 0.03;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ── Resize ──
+window.addEventListener('resize', function() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  resizeTrace();
+});
+
+animate();
+
+})();
+</script>
+</body>
+</html>
