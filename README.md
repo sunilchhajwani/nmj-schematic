@@ -4,40 +4,45 @@ Interactive 3D cross-section of a skeletal muscle fibre showing the full process
 
 ## What It Shows
 
-The simulation walks through all 10 phases of neuromuscular transmission in sequence:
+The simulation walks through all 10 phases of neuromuscular transmission in sequence, matching the textbook anatomy where a **single myelinated motor axon branches into several terminal boutons** that synapse onto the motor end plate:
 
 | # | Phase | What Happens |
 |---|-------|-------------|
-| 1 | **Resting** | Membrane potential at −90 mV. Vesicles docked at active zone. |
-| 2 | **AP Arrival** | Action potential depolarises the axon terminal bouton. |
-| 3 | **Ca²⁺ Influx** | Voltage-gated Ca²⁺ channels open → Ca²⁺ flows into presynaptic terminal. |
-| 4 | **Exocytosis** | [Ca²⁺] rise triggers SNARE-mediated vesicle fusion → ACh released into cleft. |
-| 5 | **Diffusion** | ACh molecules cross the 50 nm synaptic cleft. |
-| 6 | **Receptor Binding** | ACh binds nicotinic receptors (nAChR) on the motor end plate. |
-| 7 | **EPP Generation** | Na⁺ influx through nAChR creates the end-plate potential (local depolarisation). |
-| 8 | **Muscle AP** | EPP reaches threshold (−55 mV) → voltage-gated Na⁺ channels fire → muscle action potential. |
+| 1 | **Resting** | Membrane potential at −90 mV. Vesicles docked at each bouton. |
+| 2 | **AP Propagation** | Action potential runs down the myelinated axon and into the branches. |
+| 3 | **Ca²⁺ Influx** | Voltage-gated Ca²⁺ channels open in **all terminal boutons**. |
+| 4 | **Exocytosis** | [Ca²⁺] rise triggers SNARE-mediated vesicle fusion in every bouton → ACh released. |
+| 5 | **Diffusion** | ACh molecules cross each 50 nm synaptic cleft. |
+| 6 | **Receptor Binding** | ACh binds nicotinic receptors (nAChR) concentrated on junctional folds. |
+| 7 | **EPP Generation** | Na⁺ influx creates the end-plate potential (EPP) — summed over all boutons. |
+| 8 | **Muscle AP** | EPP reaches threshold (−55 mV) → voltage-gated Na⁺ channels fire → muscle AP. |
 | 9 | **Degradation** | AChE in the basal lamina hydrolyses ACh → choline + acetate. |
 | 10 | **Relaxation** | nAChR channels close, membrane potential resets, vesicles recycled. |
 
 ## Structures Rendered
 
-- **Motor axon** (myelinated, with myelin sheath segments)
-- **Axon terminal / bouton** (presynaptic swelling)
-- **Synaptic vesicles** (ACh-containing, 24 vesicles that fuse during exocytosis)
-- **Voltage-gated Ca²⁺ channels** (6 channels at the active zone)
-- **Synaptic cleft** (~50 nm, translucent blue region with basal lamina)
-- **Motor end plate** (sarcolemma with junctional folds)
+The 3D layout now mirrors textbook NMJ diagrams: a **single myelinated axon trunk branches into four terminal boutons** sitting on the folded motor end plate.
+
+- **Motor axon trunk** (myelinated, purple) with myelin sheath segments
+- **Axon branches** (purple tubes) splitting from one trunk into four terminal boutons
+- **Terminal boutons** (spherical presynaptic swellings) — 4 boutons, each with its own active zone
+- **Synaptic vesicles** (ACh-containing, yellow) — 10 vesicles per bouton that fuse during exocytosis
+- **Voltage-gated Ca²⁺ channels** (blue) — 4 per bouton at each active zone
+- **Synaptic clefts** (~50 nm, translucent blue slabs) — one under each bouton with basal lamina
+- **Motor end plate** (muscle fibre membrane with junctional folds)
 - **Junctional folds** (5 invaginations increasing receptor surface area)
-- **Nicotinic ACh receptors** (12 nAChR, turn green when activated)
-- **Acetylcholinesterase** (8 AChE enzymes in the cleft, degrade ACh)
+- **Nicotinic ACh receptors** (green) — 6 per bouton, turn bright when activated
+- **Acetylcholinesterase** (red enzymes) — distributed in each cleft/basal lamina
 
 ## Features
 
+- **Branching anatomy matching the textbook image** — single axon → branches → multiple boutons → motor end plate
+- **AP propagation animation** — yellow pulse travels down the myelinated axon, splits into branches, and invades each bouton
 - **Real-time 3D rendering** — orbit camera (drag to rotate, scroll to zoom)
 - **Animated particle systems** — Ca²⁺ ions, ACh molecules, degradation products
 - **Live readouts** — [Ca²⁺], vesicles released, [ACh], receptors activated, EPP (mV), membrane potential, AChE activity, AP count
 - **Membrane potential trace** — scrolling canvas graph with threshold line at −55 mV
-- **Phase-change tip bar** — contextual teaching tips appear on each phase transition
+- **Phase-change tip bar** — contextual teaching tips on each phase transition
 - **Stimulation controls** — single AP trigger or continuous stimulation (0–100 Hz)
 - **Animation speed control** — 0.2× to 3.0×
 - **Toggle labels & legend** — anatomical labels and colour-coded legend
@@ -81,7 +86,10 @@ The simulation walks through all 10 phases of neuromuscular transmission in sequ
 ## Technical Details
 
 - **Three.js r128** (stable CDN version)
-- Single HTML file (~50 KB), no external assets
+- Single HTML file (~53 KB), no external assets
+- Catmull-Rom tube geometry for organic axon branches
+- Branching physiology: AP pulse propagates from trunk → branches → all 4 boutons
+- Per-bouton components: vesicles, Ca²⁺ channels, ACh molecules, receptors, AChE
 - All physiology driven by a 10-state state machine
 - Particle systems for Ca²⁺ ions, ACh molecules, and degradation products
 - Membrane potential trace rendered on Canvas 2D
@@ -100,9 +108,10 @@ The simulation walks through all 10 phases of neuromuscular transmission in sequ
 
 This schematic is designed for PG residents and intensivists studying neuromuscular physiology. It visualises:
 
+- The **branching motor neuron** anatomy typical of textbook NMJ diagrams
 - The **safety factor** of neuromuscular transmission (EPP normally exceeds threshold with large margin)
 - The role of **AChE** in terminating synaptic action (relevant to anticholinesterase drugs like neostigmine)
-- The **Ca²⁺-dependent** nature of vesicle fusion (relevant to Lambert-Eaton myasthenic syndrome)
+- The **Ca²⁺-dependent** nature of vesicle fusion in every bouton (relevant to Lambert-Eaton myasthenic syndrome)
 - The **nicotinic receptor** as a ligand-gated Na⁺ channel (relevant to myasthenia gravis, where autoantibodies block nAChR)
 
 ## License
