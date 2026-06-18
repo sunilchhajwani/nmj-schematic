@@ -227,6 +227,10 @@
     <label>Animation speed <span id="speed-val">0.6×</span></label>
     <input type="range" id="speed-slider" min="10" max="300" value="60">
   </div>
+  <div class="ctrl-row">
+    <label>Label opacity <span id="label-opacity-val">30%</span></label>
+    <input type="range" id="label-opacity-slider" min="0" max="100" value="30">
+  </div>
   <div class="btn-row">
     <button class="btn" id="btn-fire">🔥 Fire AP</button>
     <button class="btn active" id="btn-labels">🏷️ Labels</button>
@@ -321,12 +325,13 @@ scene.add(fillLight);
 // ═══════════════════════════════════════════════════════════════════════════
 var LABELS = [];
 var showLabels = true;
+var labelOpacity = 0.30;
 
 function makeLabel(text, color, scale) {
   var canvas = document.createElement('canvas');
   canvas.width = 220; canvas.height = 56;
   var ctx = canvas.getContext('2d');
-  ctx.fillStyle = 'rgba(15,23,42,0.55)';
+  ctx.fillStyle = 'rgba(15,23,42,' + labelOpacity + ')';
   ctx.fillRect(0, 0, 220, 56);
   ctx.strokeStyle = color;
   ctx.lineWidth = 1.5;
@@ -348,6 +353,13 @@ function makeLabel(text, color, scale) {
   LABELS.push(sprite);
   scene.add(sprite);
   return sprite;
+}
+
+// Update label opacity on all existing label sprites
+function updateLabelOpacity() {
+  for (var i = 0; i < LABELS.length; i++) {
+    LABELS[i].material.opacity = labelOpacity;
+  }
 }
 
 // ── Structure registry for spotlight/dim system ──
@@ -2139,6 +2151,12 @@ document.getElementById('stim-slider').addEventListener('input', function(e) {
 document.getElementById('speed-slider').addEventListener('input', function(e) {
   phys.simSpeed = parseInt(e.target.value) / 100;
   document.getElementById('speed-val').textContent = phys.simSpeed.toFixed(1) + '×';
+});
+
+document.getElementById('label-opacity-slider').addEventListener('input', function(e) {
+  labelOpacity = parseInt(e.target.value) / 100;
+  document.getElementById('label-opacity-val').textContent = e.target.value + '%';
+  updateLabelOpacity();
 });
 
 document.getElementById('btn-fire').addEventListener('click', function() {
