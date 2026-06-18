@@ -544,12 +544,13 @@ var achMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, o
 function spawnACh(originPos) {
   var p = new THREE.Mesh(achGeo, achMat.clone());
   p.position.copy(originPos);
+  p.scale.setScalar(1.4);  // larger so it's easier to see
   scene.add(p);
   achParticles.push({
     mesh: p,
-    vx: (Math.random() - 0.5) * 1.2,
-    vy: -2.2 - Math.random() * 1.0,
-    vz: (Math.random() - 0.5) * 1.2,
+    vx: (Math.random() - 0.5) * 0.6,  // slower lateral drift
+    vy: -1.2 - Math.random() * 0.6,   // slower downward
+    vz: (Math.random() - 0.5) * 0.6,
     age: 0,
     state: 'diffusing',
     boundReceptor: null,
@@ -805,7 +806,7 @@ function updatePhysiology(dt) {
             v.position.y -= dt * 2.5;
             v.scale.setScalar(Math.max(0.1, 1 - v.userData.fuseTime * 3));
             v.material.opacity = Math.max(0, 1 - v.userData.fuseTime * 2.5);
-            if (Math.random() < dt * 15) {
+            if (Math.random() < dt * 40) {  // more ACh particles per fusing vesicle
               spawnACh(v.position);
             }
             if (v.userData.fuseTime > 0.5) {
@@ -830,22 +831,9 @@ function updatePhysiology(dt) {
       break;
 
     case 'BINDING':
-      for (var ri2 = 0; ri2 < nachrs.length; ri2++) {
-        var r = nachrs[ri2];
-        if (!r.userData.activated && phys.achConc > 10 && Math.random() < dt * 8) {
-          r.userData.activated = true;
-          r.userData.activationTime = 0;
-          r.material.color.setHex(0x86efac);
-          r.material.emissive.setHex(0x06280d);
-        }
-        if (r.userData.activated) {
-          r.userData.activationTime += dt;
-          var pulse = 1 + Math.sin(r.userData.activationTime * 15) * 0.15;
-          r.scale.set(pulse, pulse, pulse);
-        }
-      }
-      phys.receptorsActivated = nachrs.filter(function(r) { return r.userData.activated; }).length;
-      if (phys.receptorsActivated >= 6 || phys.phaseTimer > 0.4) {
+      // Receptors activate ONLY when an ACh particle physically contacts them
+      // (handled in updateParticles). This phase just gives time for diffusion.
+      if (phys.phaseTimer > 0.5) {
         setPhase('EPP_GENERATION');
       }
       break;
@@ -964,13 +952,24 @@ function updateParticles(dt) {
         var r = nachrs[j];
         if (!r.userData.activated) {
           var dist = p.mesh.position.distanceTo(r.position);
-          if (dist < 0.55) {
+          if (dist < 1.0) {  // larger binding radius — easier to see the event
+            // Bind! Make it visually obvious
             p.state = 'bound';
             p.boundReceptor = r;
             p.boundTime = 0;
             p.mesh.position.copy(r.position);
-            p.mesh.position.y += 0.25;
+            p.mesh.position.y += 0.35;
             p.vx = p.vy = p.vz = 0;
+            // Enlarge the bound ACh to make it clearly visible
+            p.mesh.scale.setScalar(2.0);
+            // Activate the receptor immediately on visual binding
+            r.userData.activated = true;
+            r.userData.activationTime = 0;
+            r.material.color.setHex(0x86efac);
+            r.material.emissive.setHex(0x06280d);
+            // Bright glow on bound ACh
+            p.mesh.material.color.setHex(0x67e8f9);
+            p.mesh.material.opacity = 1.0;
             break;
           }
         }
