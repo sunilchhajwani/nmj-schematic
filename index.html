@@ -785,9 +785,9 @@ function spawnACh(originPos) {
   scene.add(p);
   achParticles.push({
     mesh: p,
-    vx: (Math.random() - 0.5) * 0.6,
-    vy: -1.2 - Math.random() * 0.6,
-    vz: (Math.random() - 0.5) * 0.6,
+    vx: (Math.random() - 0.5) * 0.4,  // less lateral drift
+    vy: -4.0 - Math.random() * 1.5,   // fast downward to cross the wide cleft
+    vz: (Math.random() - 0.5) * 0.4,
     age: 0,
     state: 'diffusing',
     boundReceptor: null,
@@ -1772,7 +1772,7 @@ function updateParticles(dt) {
       p.mesh.position.x += p.vx * dt;
       p.mesh.position.y += p.vy * dt;
       p.mesh.position.z += p.vz * dt;
-      p.vx *= 0.96; p.vy *= 0.96; p.vz *= 0.96;
+      p.vx *= 0.99; p.vy *= 0.99; p.vz *= 0.99;  // gentle damping — particles maintain speed to cross cleft
 
       // Diffusion cloud + Y-stretch during DIFFUSION phase
       if (phys.phase === 'DIFFUSION') {
