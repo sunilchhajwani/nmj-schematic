@@ -324,26 +324,26 @@ var showLabels = true;
 
 function makeLabel(text, color, scale) {
   var canvas = document.createElement('canvas');
-  canvas.width = 320; canvas.height = 128;
+  canvas.width = 220; canvas.height = 56;
   var ctx = canvas.getContext('2d');
-  ctx.fillStyle = 'rgba(15,23,42,0.82)';
-  ctx.fillRect(0, 0, 320, 128);
+  ctx.fillStyle = 'rgba(15,23,42,0.55)';
+  ctx.fillRect(0, 0, 220, 56);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, 318, 126);
-  ctx.font = 'bold 20px Segoe UI, sans-serif';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(1, 1, 218, 54);
+  ctx.font = 'bold 15px Segoe UI, sans-serif';
   ctx.fillStyle = color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   var lines = text.split('\n');
   for (var i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], 160, 64 + (i - (lines.length-1)/2) * 24);
+    ctx.fillText(lines[i], 110, 28 + (i - (lines.length-1)/2) * 17);
   }
   var tex = new THREE.Texture(canvas);
   tex.needsUpdate = true;
-  var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true });
   var sprite = new THREE.Sprite(mat);
-  sprite.scale.set(scale || 5, scale * 0.4 || 2, 1);
+  sprite.scale.set(scale || 5, (scale || 5) * 0.255, 1);
   sprite.visible = showLabels;
   LABELS.push(sprite);
   scene.add(sprite);
