@@ -250,7 +250,7 @@
     <div class="key">[Ca²⁺]ₚᵣₑ (µmol/L)</div><div class="val accent" id="rd-ca">0.10</div>
     <div class="key">Vesicles released</div><div class="val" id="rd-ves">0</div>
     <div class="key">[ACh] cleft (µmol/L)</div><div class="val warn" id="rd-ach">0.0</div>
-    <div class="key">nAChR activated</div><div class="val" id="rd-receptors">0 / 28</div>
+    <div class="key">nAChR activated</div><div class="val" id="rd-receptors">0 / 20</div>
     <div class="key">EPP (mV)</div>
     <div class="val accent epp-cell"><span id="rd-epp">0.0</span><div class="epp-gauge"><div class="epp-gauge-fill" id="epp-gauge-fill"></div></div></div>
     <div class="key">Membrane potential</div><div class="val" id="rd-vm">−90.0</div>
@@ -297,7 +297,7 @@ scene.background = new THREE.Color(0x0b1220);
 scene.fog = new THREE.Fog(0x0b1220, 60, 130);
 
 var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 300);
-camera.position.set(0, 22, 48);
+camera.position.set(0, 12, 48);
 
 var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -388,8 +388,8 @@ function addEffect(mesh, life, onUpdate) {
 //  BRANCHING AXON + MULTIPLE TERMINAL BOUTONS
 // ═══════════════════════════════════════════════════════════════════════════
 
-var BRANCH_Y = 2.5;
-var MUSCLE_Y = -3;
+var BRANCH_Y = 2.0;
+var MUSCLE_Y = -1.5;
 var AXON_TRUNK_RADIUS = 1.0;
 var BRANCH_RADIUS = 0.7;
 var BOUTON_RADIUS = 2.4;
@@ -521,54 +521,55 @@ var muscleBodyGeo = new THREE.CylinderGeometry(6.0, 6.5, 10, 36, 1, false);
 var muscleMat = new THREE.MeshPhongMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55, shininess: 20, emissive: 0x000000 });
 var muscleBody = new THREE.Mesh(muscleBodyGeo, muscleMat);
 muscleBody.rotation.x = Math.PI / 2;
-muscleBody.position.set(4, MUSCLE_Y - 3, 0);
+muscleBody.position.set(4, MUSCLE_Y - 2.5, 0);
 muscleBody.scale.set(2.2, 1, 1.2);
 muscleBody.userData.baseScale = muscleBody.scale.clone();
 muscleGroup.add(muscleBody);
 reg(muscleBody, 'muscle');
 
-// Sarcolemma (top surface)
-var sarcGeo = new THREE.BoxGeometry(22, 0.4, 16);
-var sarcMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.65, emissive: 0x000000 });
+// Sarcolemma (thin membrane surface — the muscle cell membrane)
+var sarcGeo = new THREE.PlaneGeometry(22, 16);
+var sarcMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.55, emissive: 0x000000, side: THREE.DoubleSide });
 var sarc = new THREE.Mesh(sarcGeo, sarcMat);
+sarc.rotation.x = -Math.PI / 2;
 sarc.position.set(4, MUSCLE_Y, 0);
 muscleGroup.add(sarc);
 reg(sarc, 'sarc');
 
 makeLabel('Sarcolemma /\nMuscle Fibre', '#f43f5e', 7).position.set(14, MUSCLE_Y, 0);
 
-// Junctional folds — V-shaped invaginations into the sarcolemma
-// Real anatomy: deep grooves with receptor-dense crests and Na⁺ channel-rich depths
+// Junctional folds — narrow slit-like invaginations into the sarcolemma
+// Aligned under the bouton area (x ~2-8), steep walls, deep grooves
 var folds = [];
 var foldCrestData = []; // store crest positions for receptor placement
-var FOLD_COUNT = 7;
-var FOLD_DEPTH = 2.8;
-var FOLD_SPACING = 2.4;
-var foldStartX = -2.5;
+var FOLD_COUNT = 5;
+var FOLD_DEPTH = 3.5;
+var FOLD_SPACING = 1.8;
+var foldStartX = 2.0; // centered under boutons (x range 4-6)
 
 for (var fi = 0; fi < FOLD_COUNT; fi++) {
   var fx = foldStartX + fi * FOLD_SPACING;
-  // Build V-shaped groove using two angled planes (left wall + right wall)
+  // Build narrow slit using two steep, close walls
   var foldGroup = new THREE.Group();
-  var wallGeo = new THREE.BoxGeometry(0.15, FOLD_DEPTH * 1.4, 9.0);
+  var wallGeo = new THREE.BoxGeometry(0.1, FOLD_DEPTH * 1.4, 9.0);
   var wallMat = new THREE.MeshPhongMaterial({ color: 0xf87171, transparent: true, opacity: 0.55, side: THREE.DoubleSide, emissive: 0x000000 });
 
-  // Left wall (angled inward)
+  // Left wall (steep, close to center)
   var lw = new THREE.Mesh(wallGeo, wallMat.clone());
-  lw.position.set(fx - 0.55, MUSCLE_Y - FOLD_DEPTH * 0.5, 0);
-  lw.rotation.z = -0.32;
+  lw.position.set(fx - 0.3, MUSCLE_Y - FOLD_DEPTH * 0.5, 0);
+  lw.rotation.z = -0.12;
   foldGroup.add(lw);
   reg(lw, 'fold');
 
-  // Right wall (angled inward)
+  // Right wall (steep, close to center)
   var rw = new THREE.Mesh(wallGeo, wallMat.clone());
-  rw.position.set(fx + 0.55, MUSCLE_Y - FOLD_DEPTH * 0.5, 0);
-  rw.rotation.z = 0.32;
+  rw.position.set(fx + 0.3, MUSCLE_Y - FOLD_DEPTH * 0.5, 0);
+  rw.rotation.z = 0.12;
   foldGroup.add(rw);
   reg(rw, 'fold');
 
-  // Fold floor (bottom of the groove)
-  var floorGeo = new THREE.BoxGeometry(1.0, 0.15, 9.0);
+  // Fold floor (bottom of the narrow groove)
+  var floorGeo = new THREE.BoxGeometry(0.5, 0.12, 9.0);
   var foldFloor = new THREE.Mesh(floorGeo, wallMat.clone());
   foldFloor.position.set(fx, MUSCLE_Y - FOLD_DEPTH + 0.1, 0);
   foldGroup.add(foldFloor);
@@ -577,10 +578,10 @@ for (var fi = 0; fi < FOLD_COUNT; fi++) {
   folds.push(lw, rw, foldFloor);
   muscleGroup.add(foldGroup);
 
-  // Store crest position (top of the V, at sarcolemma surface) for receptor clustering
+  // Store crest position (top of the slit, at sarcolemma surface) for receptor clustering
   foldCrestData.push({ x: fx, y: MUSCLE_Y + 0.1, z: 0, index: fi });
 }
-makeLabel('Junctional\nFolds', '#f87171', 5).position.set(-6, MUSCLE_Y - 2.5, 6);
+makeLabel('Junctional\nFolds', '#f87171', 5).position.set(1, MUSCLE_Y - 2.5, 6);
 
 // Synaptic cleft slabs (one per bouton)
 var cleftSlabs = [];
@@ -595,23 +596,12 @@ for (var ci = 0; ci < boutonPositions.length; ci++) {
   reg(cm, 'cleft');
 }
 
-// Basal lamina lines in cleft
-var blGeo = new THREE.BoxGeometry(5.5, 0.08, 5.5);
-var blMat = new THREE.MeshBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.35 });
-for (var ci2 = 0; ci2 < boutonPositions.length; ci2++) {
-  var pos = boutonPositions[ci2];
-  var bl = new THREE.Mesh(blGeo, blMat.clone());
-  bl.position.set(pos.x, 0, pos.z);
-  muscleGroup.add(bl);
-  reg(bl, 'basalLamina');
-}
-
 // EPP wave plane (hidden by default)
 var eppWaveGeo = new THREE.PlaneGeometry(20, 14);
 var eppWaveMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
 var eppWave = new THREE.Mesh(eppWaveGeo, eppWaveMat);
 eppWave.rotation.x = -Math.PI / 2;
-eppWave.position.set(4, MUSCLE_Y + 0.25, 0);
+eppWave.position.set(4, MUSCLE_Y + 0.15, 0);
 eppWave.scale.set(0.01, 0.01, 1);
 eppWave.visible = false;
 muscleGroup.add(eppWave);
@@ -754,9 +744,9 @@ for (var ri = 0; ri < boutonPositions.length; ri++) {
     reg(am, 'ache');
   }
 }
-makeLabel('nAChR\n(crest)', '#22c55e', 5).position.set(-2, MUSCLE_Y + 0.8, 7);
-makeLabel('VG Na⁺\n(depth)', '#f97316', 5).position.set(-2, MUSCLE_Y - 2.5, 7);
-makeLabel('AChE\n(cleft)', '#ef4444', 5).position.set(10, 1.5, 7);
+makeLabel('nAChR\n(crest)', '#22c55e', 5).position.set(1, MUSCLE_Y + 0.8, 7);
+makeLabel('VG Na⁺\n(depth)', '#f97316', 5).position.set(1, MUSCLE_Y - 3.0, 7);
+makeLabel('AChE\n(cleft)', '#ef4444', 5).position.set(10, 0.5, 7);
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  PARTICLE SYSTEMS
@@ -2142,7 +2132,7 @@ var camRadius = 50;
 var camTheta = 0.55;
 var camPhi = 0.40;
 var targetTheta = camTheta, targetPhi = camPhi, targetRadius = camRadius;
-var camTarget = new THREE.Vector3(3, 0, 0);
+var camTarget = new THREE.Vector3(3, 0.5, 0);
 
 var isDragging = false;
 var lastMouseX = 0, lastMouseY = 0;
