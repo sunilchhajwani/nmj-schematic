@@ -667,7 +667,7 @@ for (var bIndex = 0; bIndex < boutonPositions.length; bIndex++) {
     data.vesicles.push(vm);
     scene.add(vm);
     reg(vm, 'vesicle');
-    detailOnlyObjects.push(vm);
+    // vesicles stay visible in simple mode (essential for understanding ACh release)
   }
 
   // Ca channels at the bottom of each bouton (active zone)
@@ -732,7 +732,7 @@ for (var ci3 = 0; ci3 < foldCrestData.length; ci3++) {
     nachrs.push(rm);
     scene.add(rm);
     reg(rm, 'receptor');
-    detailOnlyObjects.push(rm);
+    // receptors stay visible in simple mode (essential for showing ACh binding)
   }
 
   // VG Na⁺ channels in the fold DEPTH (near the floor of the fold)
@@ -778,7 +778,7 @@ var achGeo = new THREE.SphereGeometry(0.14, 8, 6);
 var achMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.9 });
 
 function spawnACh(originPos) {
-  if (!detailedMode) return;
+  // ACh particles visible in both simple and detailed modes (key event: neurotransmitter crossing cleft)
   var p = new THREE.Mesh(achGeo, achMat.clone());
   p.position.copy(originPos);
   p.scale.setScalar(1.4);
