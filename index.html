@@ -516,25 +516,17 @@ makeLabel('Terminal\nBoutons', '#a78bfa', 6).position.set(8, BRANCH_Y + 2.5, 0);
 var muscleGroup = new THREE.Group();
 scene.add(muscleGroup);
 
-// Main muscle body
-var muscleBodyGeo = new THREE.CylinderGeometry(6.0, 6.5, 10, 36, 1, false);
-var muscleMat = new THREE.MeshPhongMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55, shininess: 20, emissive: 0x000000 });
-var muscleBody = new THREE.Mesh(muscleBodyGeo, muscleMat);
-muscleBody.rotation.x = Math.PI / 2;
-muscleBody.position.set(4, MUSCLE_Y - 2.5, 0);
-muscleBody.scale.set(2.2, 1, 1.2);
-muscleBody.userData.baseScale = muscleBody.scale.clone();
-muscleGroup.add(muscleBody);
-reg(muscleBody, 'muscle');
-
-// Sarcolemma (thin membrane surface — the muscle cell membrane)
+// Sarcolemma (thin membrane surface — the muscle cell membrane, with folds invaginating into it)
+// No bulky muscle cylinder — the sarcolemma plane IS the muscle surface
 var sarcGeo = new THREE.PlaneGeometry(22, 16);
 var sarcMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.55, emissive: 0x000000, side: THREE.DoubleSide });
 var sarc = new THREE.Mesh(sarcGeo, sarcMat);
 sarc.rotation.x = -Math.PI / 2;
 sarc.position.set(4, MUSCLE_Y, 0);
+sarc.userData.baseScale = { x: 1, y: 1, z: 1 };
 muscleGroup.add(sarc);
 reg(sarc, 'sarc');
+reg(sarc, 'muscle');
 
 makeLabel('Sarcolemma /\nMuscle Fibre', '#f43f5e', 7).position.set(14, MUSCLE_Y, 0);
 
@@ -1648,7 +1640,7 @@ function updatePhysiology(dt) {
       break;
 
     case 'AP_MUSCLE':
-      // Muscle contraction scale animation
+      // Sarcolemma contraction scale animation
       phys.contractionTimer += dt;
       var ct = phys.contractionTimer;
       var sx;
@@ -1656,8 +1648,7 @@ function updatePhysiology(dt) {
       else if (ct < 0.25) sx = 0.94 + ((ct - 0.12) / 0.13) * 0.09; // 0.94 → 1.03
       else if (ct < 0.5) sx = 1.03 - ((ct - 0.25) / 0.25) * 0.03;  // 1.03 → 1.0
       else sx = 1.0;
-      var mb = muscleBody.userData.baseScale;
-      muscleBody.scale.set(mb.x * sx, mb.y, mb.z);
+      sarc.scale.set(sx, 1, 1);
 
       if (phys.phaseTimer < 0.15) {
         phys.vm = Math.min(30, phys.vm + 300 * dt);
