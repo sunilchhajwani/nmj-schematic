@@ -280,6 +280,7 @@
   </div>
   <div class="btn-row" style="margin-top:8px">
     <button class="btn active" id="btn-detail">🔬 Detailed</button>
+    <button class="btn active" id="btn-autocam">🎥 Auto-Cam</button>
   </div>
   <div id="disease-row">
     <label>Pathology Overlay <span class="disease-tag" id="disease-tag" style="background:#1e293b;color:#64748b">NORMAL</span></label>
@@ -332,6 +333,7 @@
     <span class="key">⏸ Pause</span><span>Freeze simulation at current phase</span>
     <span class="key">⏭ Step ▸</span><span>Advance to next phase manually</span>
     <span class="key">🔬 Detailed</span><span>Toggle simplified vs detailed view</span>
+    <span class="key">🎥 Auto-Cam</span><span>Camera auto-follows each phase (toggle off for manual)</span>
   </div>
 </div>
 
@@ -1548,6 +1550,9 @@ function setPhase(newPhase) {
   // Spotlight
   applySpotlight(newPhase);
 
+  // Auto-camera: move to phase-specific viewpoint
+  setCameraForPhase(newPhase);
+
   // AP muscle effects
   if (newPhase === 'AP_MUSCLE') {
     phys.contractionTimer = 0;
@@ -2534,6 +2539,39 @@ function updateTimelineActive() {
 updateTimelineActive();
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  AUTO-CAMERA FLYTHROUGH
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Per-phase camera presets: { x, y, z } = look-at target, radius = zoom distance, theta = orbit angle, phi = elevation
+// Anatomy reference: axon trunk at y=2, boutons at y=2 (x:4-6, z:-6 to 6), cleft at y=-0.75, sarcolemma at y=-3.5
+var CAMERA_PHASES = {
+  RESTING:        { x: 3,   y: -0.5, z: 0,   radius: 50, theta: 0.55, phi: 0.40 },  // wide overview
+  AP_PROPAGATION: { x: -5,  y: 2.0,  z: 0,   radius: 35, theta: 0.20, phi: 0.15 },  // follow AP along axon trunk → boutons
+  CA_INFLUX:      { x: 5,   y: 1.5,  z: 0,   radius: 22, theta: 0.30, phi: 0.25 },  // close on boutons, see Ca²⁺ channels
+  EXOCYTOSIS:     { x: 5,   y: 1.0,  z: 0,   radius: 20, theta: 0.35, phi: 0.15 },  // bouton bottoms, vesicle fusion
+  DIFFUSION:      { x: 5,   y: -0.5, z: 0,   radius: 24, theta: 0.40, phi: 0.10 },  // cleft area, ACh crossing down
+  BINDING:        { x: 5,   y: -2.5, z: 0,   radius: 20, theta: 0.40, phi: 0.05 },  // receptors at crater rims
+  EPP_GENERATION: { x: 4,   y: -3.0, z: 0,   radius: 26, theta: 0.50, phi: 0.15 },  // folds + sarcolemma
+  AP_MUSCLE:      { x: 4,   y: -3.5, z: 0,   radius: 30, theta: 0.50, phi: 0.25 },  // sarcolemma contraction
+  DEGRADATION:    { x: 5,   y: -0.5, z: 0,   radius: 25, theta: 0.45, phi: 0.10 },  // cleft, AChE working
+  RELAXATION:     { x: 3,   y: -0.5, z: 0,   radius: 45, theta: 0.55, phi: 0.35 },  // pull back to overview
+};
+
+var autoCamera = true;       // auto-camera on by default
+var userOverride = false;    // true when user drags/scrolls; reset on phase change
+
+// Set camera targets for a phase
+function setCameraForPhase(phase) {
+  if (!autoCamera) return;
+  var preset = CAMERA_PHASES[phase] || CAMERA_PHASES.RESTING;
+  targetTheta = preset.theta;
+  targetPhi = preset.phi;
+  targetRadius = preset.radius;
+  camTarget.set(preset.x, preset.y, preset.z);
+  userOverride = false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  CAMERA / ORBIT CONTROLS
 // ═══════════════════════════════════════════════════════════════════════════
 var camRadius = 50;
@@ -2549,6 +2587,7 @@ renderer.domElement.addEventListener('mousedown', function(e) {
   isDragging = true;
   lastMouseX = e.clientX;
   lastMouseY = e.clientY;
+  userOverride = true;
 });
 window.addEventListener('mousemove', function(e) {
   if (!isDragging) return;
@@ -2564,6 +2603,7 @@ window.addEventListener('mouseup', function() { isDragging = false; });
 
 renderer.domElement.addEventListener('wheel', function(e) {
   e.preventDefault();
+  userOverride = true;
   targetRadius += e.deltaY * 0.03;
   targetRadius = Math.max(18, Math.min(90, targetRadius));
 });
@@ -2604,6 +2644,14 @@ function updateCamera(dt) {
   camTheta += (targetTheta - camTheta) * dt * 5;
   camPhi += (targetPhi - camPhi) * dt * 5;
   camRadius += (targetRadius - camRadius) * dt * 5;
+
+  // Lerp camTarget toward its target (needed for auto-camera pan between phases)
+  var preset = autoCamera && !userOverride ? (CAMERA_PHASES[phys.phase] || CAMERA_PHASES.RESTING) : null;
+  if (preset) {
+    camTarget.x += (preset.x - camTarget.x) * dt * 3;
+    camTarget.y += (preset.y - camTarget.y) * dt * 3;
+    camTarget.z += (preset.z - camTarget.z) * dt * 3;
+  }
 
   camera.position.x = camTarget.x + camRadius * Math.cos(camPhi) * Math.cos(camTheta);
   camera.position.y = camTarget.y + camRadius * Math.sin(camPhi);
@@ -2669,6 +2717,13 @@ document.getElementById('btn-detail').addEventListener('click', function() {
   setDetailMode(!detailedMode);
 });
 
+document.getElementById('btn-autocam').addEventListener('click', function(e) {
+  autoCamera = !autoCamera;
+  e.currentTarget.classList.toggle('active', autoCamera);
+  e.currentTarget.textContent = autoCamera ? '🎥 Auto-Cam' : '🎥 Manual';
+  if (autoCamera) setCameraForPhase(phys.phase);
+});
+
 document.getElementById('disease-select').addEventListener('change', function(e) {
   applyDisease(e.target.value);
 });
@@ -2714,7 +2769,7 @@ function animate() {
   updateHUD();
   drawTrace();
 
-  if (!isDragging && phys.phase === 'RESTING') {
+  if (!isDragging && phys.phase === 'RESTING' && (!autoCamera || userOverride)) {
     targetTheta += dt * 0.02;
   }
 
