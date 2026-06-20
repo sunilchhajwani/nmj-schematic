@@ -210,10 +210,10 @@
   <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Voltage-gated Ca²⁺ channels</div>
   <div class="legend-item"><div class="legend-dot" style="background:#bae6fd"></div>Synaptic cleft (~50 nm)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#22d3ee"></div>ACh molecules</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>nAChR (at fold crests)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>VG Na⁺ channels (fold depths)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>nAChR (at crater rims)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>VG Na⁺ channels (crater depths)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>AChE (basal lamina)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Junctional folds (V-grooves)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Junctional folds (crater-like depressions)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#f43f5e"></div>Sarcolemma / muscle fibre</div>
 </div>
 
@@ -253,7 +253,7 @@
     <div class="key">[Ca²⁺]ₚᵣₑ (µmol/L)</div><div class="val accent" id="rd-ca">0.10</div>
     <div class="key">Vesicles released</div><div class="val" id="rd-ves">0</div>
     <div class="key">[ACh] cleft (µmol/L)</div><div class="val warn" id="rd-ach">0.0</div>
-    <div class="key">nAChR activated</div><div class="val" id="rd-receptors">0 / 20</div>
+    <div class="key">nAChR activated</div><div class="val" id="rd-receptors">0 / 24</div>
     <div class="key">EPP (mV)</div>
     <div class="val accent epp-cell"><span id="rd-epp">0.0</span><div class="epp-gauge"><div class="epp-gauge-fill" id="epp-gauge-fill"></div></div></div>
     <div class="key">Membrane potential</div><div class="val" id="rd-vm">−90.0</div>
@@ -551,48 +551,52 @@ reg(sarc, 'muscle');
 
 makeLabel('Sarcolemma /\nMuscle Fibre', '#f43f5e', 7).position.set(14, MUSCLE_Y, 0);
 
-// Junctional folds — narrow slit-like invaginations into the sarcolemma
-// Aligned under the bouton area (x ~2-8), steep walls, deep grooves
+// Junctional folds — crater-like bowl depressions on the flat sarcolemma surface
+// One crater under each bouton (where the terminal bouton docks), matching real NMJ anatomy
 var folds = [];
-var foldCrestData = []; // store crest positions for receptor placement
-var FOLD_COUNT = 5;
-var FOLD_DEPTH = 3.5;
-var FOLD_SPACING = 1.8;
-var foldStartX = 2.0; // centered under boutons (x range 4-6)
+var foldCrestData = []; // store crater rim positions for receptor placement
+var CRATER_RADIUS = 1.8;   // radius of each bowl depression
+var CRATER_DEPTH = 2.8;    // how deep the bowl invaginates
 
-for (var fi = 0; fi < FOLD_COUNT; fi++) {
-  var fx = foldStartX + fi * FOLD_SPACING;
-  // Build narrow slit using two steep, close walls
+for (var fi = 0; fi < boutonPositions.length; fi++) {
+  var bp = boutonPositions[fi];
   var foldGroup = new THREE.Group();
-  var wallGeo = new THREE.BoxGeometry(0.1, FOLD_DEPTH * 1.4, 9.0);
-  var wallMat = new THREE.MeshPhongMaterial({ color: 0xf87171, transparent: true, opacity: 0.55, side: THREE.DoubleSide, emissive: 0x000000 });
 
-  // Left wall (steep, close to center)
-  var lw = new THREE.Mesh(wallGeo, wallMat.clone());
-  lw.position.set(fx - 0.3, MUSCLE_Y - FOLD_DEPTH * 0.5, 0);
-  lw.rotation.z = -0.12;
-  foldGroup.add(lw);
-  reg(lw, 'fold');
+  // Bowl: upper hemisphere of a sphere, opening upward — the crater
+  // phiStart=0, phiLength=Math.PI gives a half-sphere bowl
+  var bowlGeo = new THREE.SphereGeometry(CRATER_RADIUS, 32, 16,
+    0, Math.PI * 2,          // full circle (theta)
+    0, Math.PI * 0.55        // top ~55% of sphere → shallow bowl, not full hemisphere
+  );
+  var bowlMat = new THREE.MeshPhongMaterial({
+    color: 0xf87171, transparent: true, opacity: 0.5,
+    side: THREE.DoubleSide, emissive: 0x000000, shininess: 30
+  });
+  var bowl = new THREE.Mesh(bowlGeo, bowlMat);
+  // Flip so the bowl opens UP (crater on the flat surface, depression below)
+  bowl.rotation.x = Math.PI;
+  bowl.position.set(bp.x, MUSCLE_Y, bp.z);
+  foldGroup.add(bowl);
+  reg(bowl, 'fold');
+  folds.push(bowl);
 
-  // Right wall (steep, close to center)
-  var rw = new THREE.Mesh(wallGeo, wallMat.clone());
-  rw.position.set(fx + 0.3, MUSCLE_Y - FOLD_DEPTH * 0.5, 0);
-  rw.rotation.z = 0.12;
-  foldGroup.add(rw);
-  reg(rw, 'fold');
+  // Rim ring — highlights the crater edge on the sarcolemma surface
+  var rimGeo = new THREE.TorusGeometry(CRATER_RADIUS, 0.08, 8, 32);
+  var rimMat = new THREE.MeshPhongMaterial({
+    color: 0xfb7185, transparent: true, opacity: 0.6, emissive: 0x1a0000
+  });
+  var rim = new THREE.Mesh(rimGeo, rimMat);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.set(bp.x, MUSCLE_Y + 0.05, bp.z);
+  foldGroup.add(rim);
+  reg(rim, 'fold');
+  folds.push(rim);
 
-  // Fold floor (bottom of the narrow groove)
-  var floorGeo = new THREE.BoxGeometry(0.5, 0.12, 9.0);
-  var foldFloor = new THREE.Mesh(floorGeo, wallMat.clone());
-  foldFloor.position.set(fx, MUSCLE_Y - FOLD_DEPTH + 0.1, 0);
-  foldGroup.add(foldFloor);
-  reg(foldFloor, 'fold');
-
-  folds.push(lw, rw, foldFloor);
   muscleGroup.add(foldGroup);
 
-  // Store crest position (top of the slit, at sarcolemma surface) for receptor clustering
-  foldCrestData.push({ x: fx, y: MUSCLE_Y + 0.1, z: 0, index: fi });
+  // Store crater rim position for receptor clustering (rim = crest of the fold)
+  // Multiple crest points around the rim for receptor distribution
+  foldCrestData.push({ x: bp.x, y: MUSCLE_Y + 0.1, z: bp.z, index: fi, radius: CRATER_RADIUS, depth: CRATER_DEPTH });
 }
 makeLabel('Junctional\nFolds', '#f87171', 5).position.set(1, MUSCLE_Y - 2.5, 6);
 
@@ -706,7 +710,7 @@ makeLabel('VG Ca²⁺\nChannels', '#3b82f6', 5).position.set(10, BRANCH_Y - 1, 5
 
 var nachrs = [];
 var acheEnzymes = [];
-var naChannels = []; // Voltage-gated Na⁺ channels in fold depths
+var naChannels = []; // Voltage-gated Na⁺ channels in crater depths
 var nachrGeo = new THREE.CylinderGeometry(0.24, 0.18, 0.55, 10);
 var nachrMat = new THREE.MeshPhongMaterial({ color: 0x22c55e, emissive: 0x06280d, shininess: 50, transparent: true, opacity: 1.0 });
 var acheGeo = new THREE.ConeGeometry(0.20, 0.55, 8);
@@ -714,20 +718,22 @@ var acheMat = new THREE.MeshPhongMaterial({ color: 0xef4444, emissive: 0x4a0000,
 var naChanGeo = new THREE.CylinderGeometry(0.16, 0.12, 0.45, 8);
 var naChanMat = new THREE.MeshPhongMaterial({ color: 0xf97316, emissive: 0x2a1500, shininess: 40, transparent: true, opacity: 0.85 });
 
-// Place receptors CLUSTERED at fold crests (high density — 10,000/µm² in real tissue)
-// Place VG Na⁺ channels in fold depths (lower, where AP is generated)
-var RECEPTORS_PER_CREST = 4; // 4 receptors clustered at each fold crest
+// Place receptors CLUSTERED at crater rims (high density — 10,000/µm² in real tissue)
+// Place VG Na⁺ channels in crater depths (bottom of the bowl, where AP is generated)
+var RECEPTORS_PER_CRATER = 6; // 6 receptors around each crater rim
 
 for (var ci3 = 0; ci3 < foldCrestData.length; ci3++) {
   var crest = foldCrestData[ci3];
-  var boutonIdx = ci3 % boutonPositions.length;
+  var boutonIdx = ci3;
 
-  // Cluster receptors tightly at the crest (top of the fold opening)
-  for (var rj = 0; rj < RECEPTORS_PER_CREST; rj++) {
+  // Distribute receptors around the crater rim (the crest of the fold)
+  for (var rj = 0; rj < RECEPTORS_PER_CRATER; rj++) {
     var rm = new THREE.Mesh(nachrGeo, nachrMat.clone());
-    var rx = crest.x + (rj - (RECEPTORS_PER_CREST - 1) / 2) * 0.42;
-    var rz = (rj % 2 ? 1.0 : -1.0);
+    var angle = (rj / RECEPTORS_PER_CRATER) * Math.PI * 2;
+    var rx = crest.x + Math.cos(angle) * crest.radius * 0.85;
+    var rz = crest.z + Math.sin(angle) * crest.radius * 0.85;
     rm.position.set(rx, crest.y, rz);
+    rm.rotation.x = Math.PI / 2; // stand upright on the rim
     rm.userData = { activated: false, activationTime: 0, baseColor: 0x22c55e, boutonIndex: boutonIdx, targetScale: 1.0, foldIndex: ci3 };
     nachrs.push(rm);
     scene.add(rm);
@@ -735,10 +741,15 @@ for (var ci3 = 0; ci3 < foldCrestData.length; ci3++) {
     // receptors stay visible in simple mode (essential for showing ACh binding)
   }
 
-  // VG Na⁺ channels in the fold DEPTH (near the floor of the fold)
-  for (var ni = 0; ni < 2; ni++) {
+  // VG Na⁺ channels in the crater DEPTH (near the bottom of the bowl)
+  for (var ni = 0; ni < 3; ni++) {
     var nm = new THREE.Mesh(naChanGeo, naChanMat.clone());
-    nm.position.set(crest.x + (ni - 0.5) * 0.6, MUSCLE_Y - FOLD_DEPTH + 0.3, (ni ? 0.8 : -0.8));
+    var naAngle = (ni / 3) * Math.PI * 2;
+    nm.position.set(
+      crest.x + Math.cos(naAngle) * crest.radius * 0.3,
+      MUSCLE_Y - CRATER_DEPTH * 0.6,
+      crest.z + Math.sin(naAngle) * crest.radius * 0.3
+    );
     nm.userData = { active: false, glowTime: 0, foldIndex: ci3 };
     naChannels.push(nm);
     scene.add(nm);
@@ -764,7 +775,7 @@ for (var ri = 0; ri < boutonPositions.length; ri++) {
     detailOnlyObjects.push(am);
   }
 }
-makeLabel('nAChR\n(crest)', '#22c55e', 5).position.set(1, MUSCLE_Y + 0.8, 7);
+makeLabel('nAChR\n(rim)', '#22c55e', 5).position.set(1, MUSCLE_Y + 0.8, 7);
 makeLabel('VG Na⁺\n(depth)', '#f97316', 5).position.set(1, MUSCLE_Y - 3.0, 7);
 makeLabel('AChE\n(cleft)', '#ef4444', 5).position.set(10, -0.75, 7);
 
@@ -1097,12 +1108,12 @@ var EXPLANATIONS = {
 
   BINDING:
     '<strong>Receptor Binding</strong><br>' +
-    'ACh binds to <strong>nicotinic ACh receptors (nAChR)</strong> clustered at the <strong>crest of junctional folds</strong>.' +
+    'ACh binds to <strong>nicotinic ACh receptors (nAChR)</strong> clustered at the <strong>rim of junctional fold craters</strong>.' +
     '<ul>' +
     '<li>nAChR is a <strong>ligand-gated ion channel</strong> (pentameric: (α1)₂β1δε)</li>' +
     '<li>2 ACh molecules must bind to the 2 α subunits to open the channel</li>' +
-    '<li>Receptors are at <strong>fold crests</strong> — density ~<span class="green">10,000/µm²</span> (highest in the body)</li>' +
-    '<li>Watch green flashes as ACh molecules bind at each fold crest</li>' +
+    '<li>Receptors are at <strong>crater rims</strong> — density ~<span class="green">10,000/µm²</span> (highest in the body)</li>' +
+    '<li>Watch green flashes as ACh molecules bind at each crater rim</li>' +
     '<li>Binding is <strong>reversible</strong> — ACh unbinds and can rebind or be degraded</li>' +
     '</ul>' +
     '<span class="green">→ Next: Open nAChR → Na⁺ influx → end-plate potential (EPP)</span>',
@@ -1112,11 +1123,11 @@ var EXPLANATIONS = {
     'Open nAChR channels conduct Na⁺ inward, creating the <strong>end-plate potential (EPP)</strong>.' +
     '<ul>' +
     '<li>nAChR is a <strong>non-selective cation channel</strong> — Na⁺ influx > K⁺ efflux</li>' +
-    '<li>Net inward current <strong>depolarizes</strong> the fold crests, spreading down the folds</li>' +
-    '<li>Junctional folds <strong>amplify</strong> the depolarization (fold area ≈ 5-7× flat area)</li>' +
+    '<li>Net inward current <strong>depolarizes</strong> the crater rims, spreading into the fold depths</li>' +
+    '<li>Junctional fold craters <strong>amplify</strong> the depolarization (fold area ≈ 5-7× flat area)</li>' +
     '<li>EPP is a <strong>graded potential</strong> — amplitude ∝ receptors activated</li>' +
     '<li>EPP rises toward <span class="warn">threshold (−55 mV)</span> — watch the trace</li>' +
-    '<li>As V<sub>m</sub> approaches threshold, <strong>VG Na⁺ channels</strong> in fold depths glow orange</li>' +
+    '<li>As V<sub>m</sub> approaches threshold, <strong>VG Na⁺ channels</strong> in crater depths glow orange</li>' +
     '</ul>' +
     '<span class="fire">→ When V<sub>m</sub> crosses −55 mV → VG Na⁺ channels fire → muscle AP!</span>',
 
@@ -1655,7 +1666,7 @@ function updatePhysiology(dt) {
       var receptorFraction = phys.receptorsActivated / nachrs.length;
       phys.epp = Math.min(70, phys.epp + 120 * receptorFraction * dt);
       phys.vm = -90 + phys.epp;
-      // VG Na⁺ channels in fold depths start glowing as Vm approaches threshold
+      // VG Na⁺ channels in crater depths start glowing as Vm approaches threshold
       if (phys.vm > -70) {
         for (var nci = 0; nci < naChannels.length; nci++) {
           naChannels[nci].material.emissive.setHex(0xcc4400);
