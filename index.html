@@ -169,11 +169,48 @@
     font-size: 11px; color: #64748b;
   }
   #start-overlay .controls-grid .key { color: #94a3b8; font-weight: 600; }
+
+  /* ── Disease selector ── */
+  #disease-row { margin-top: 14px; padding-top: 12px; border-top: 1px solid #1e293b; }
+  #disease-row label {
+    font-size: 11px; color: #94a3b8; display: block; margin-bottom: 5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  #disease-row label .disease-tag {
+    font-size: 9px; padding: 2px 7px; border-radius: 4px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  #disease-select {
+    width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid #1e293b;
+    background: #0f172a; color: #e2e8f0; font-size: 12px; font-weight: 600;
+    cursor: pointer; pointer-events: auto; outline: none; transition: border-color 0.2s;
+  }
+  #disease-select:hover { border-color: #22d3ee; }
+  #disease-select:focus { border-color: #22d3ee; box-shadow: 0 0 0 2px rgba(34,211,238,0.15); }
+  #disease-select option { background: #0f172a; color: #e2e8f0; }
+
+  /* ── Disease info banner ── */
+  #disease-banner {
+    position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
+    background: rgba(15,23,42,0.95); border: 1px solid; border-radius: 10px;
+    padding: 8px 20px; font-size: 12px; z-index: 10; max-width: 520px;
+    text-align: center; backdrop-filter: blur(8px); display: none;
+    transition: opacity 0.3s; opacity: 0;
+  }
+  #disease-banner.show { display: block; opacity: 1; }
+  #disease-banner .db-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  #disease-banner .db-desc { color: #94a3b8; font-size: 11px; line-height: 1.4; }
 </style>
 </head>
 <body>
 <div id="canvas-container"></div>
 <div id="phase-flash"></div>
+
+<!-- Disease banner -->
+<div id="disease-banner">
+  <div class="db-title" id="db-title"></div>
+  <div class="db-desc" id="db-desc"></div>
+</div>
 
 <!-- HUD -->
 <div id="hud">
@@ -243,6 +280,17 @@
   </div>
   <div class="btn-row" style="margin-top:8px">
     <button class="btn active" id="btn-detail">🔬 Detailed</button>
+  </div>
+  <div id="disease-row">
+    <label>Pathology Overlay <span class="disease-tag" id="disease-tag" style="background:#1e293b;color:#64748b">NORMAL</span></label>
+    <select id="disease-select">
+      <option value="normal">Normal Neuromuscular Transmission</option>
+      <option value="mg">Myasthenia Gravis (autoantibodies vs nAChR)</option>
+      <option value="lems">Lambert-Eaton (autoantibodies vs Ca²⁺ channel)</option>
+      <option value="botulism">Botulism (SNARE cleavage → no exocytosis)</option>
+      <option value="curare">Curare / Non-depolarizing NMB (competitive block)</option>
+      <option value="op">Organophosphate Poisoning (AChE inhibition)</option>
+    </select>
   </div>
 </div>
 
@@ -980,6 +1028,250 @@ function updateAPPropagation(progress, dt) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  DISEASE OVERLAY CONFIG
+// ═══════════════════════════════════════════════════════════════════════════
+
+var DISEASES = {
+  normal: {
+    name: 'Normal',
+    tag: 'NORMAL',
+    tagColor: '#1e293b',
+    tagText: '#64748b',
+    bannerBorder: '#1e293b',
+    bannerColor: '#94a3b8',
+    desc: 'Normal neuromuscular transmission — full safety factor.',
+    // multipliers (1.0 = normal, 0 = disabled)
+    caInfluxRate: 1.0,       // Ca²⁺ entry speed
+    caChannelFraction: 1.0,  // fraction of Ca²⁺ channels functional
+    exocytosisEnabled: true,
+    achReleaseFraction: 1.0, // fraction of vesicles that release
+    receptorFraction: 1.0,   // fraction of nAChR available
+    receptorBlockCompetitive: false, // competitive antagonism (curare)
+    receptorBlockFraction: 0.0,
+    acheEnabled: true,
+    acheRate: 1.0,            // AChE degradation rate multiplier
+    achAccumulation: false,   // ACh accumulates over time (OP)
+    facilitation: false,      // LEMS: improves with repeated stimulation
+    // tips shown per phase
+    tips: {},
+  },
+  mg: {
+    name: 'Myasthenia Gravis',
+    tag: 'MG',
+    tagColor: '#7c2d12',
+    tagText: '#fbbf24',
+    bannerBorder: '#fbbf24',
+    bannerColor: '#fbbf24',
+    desc: 'Autoantibodies destroy nAChR → fewer receptors → EPP subthreshold on repeated stimulation (fatigability).',
+    caInfluxRate: 1.0,
+    caChannelFraction: 1.0,
+    exocytosisEnabled: true,
+    achReleaseFraction: 1.0,
+    receptorFraction: 0.33,    // ~1/3 of receptors available
+    receptorBlockCompetitive: false,
+    receptorBlockFraction: 0.0,
+    acheEnabled: true,
+    acheRate: 1.0,
+    achAccumulation: false,
+    facilitation: false,
+    tips: {
+      BINDING: '🟡 MG: Only ~33% of nAChR are available (autoantibodies destroyed the rest). Fewer receptors activate.',
+      EPP_GENERATION: '🔴 MG: EPP is reduced — may not reach threshold. This is the "safety factor" being eroded. Repeated stimulation fatigues the synapse further.',
+      AP_MUSCLE: '⚠️ MG: Muscle AP may fail on repeated stimulation. This is fatigability — the hallmark of myasthenia.',
+      DEGRADATION: '💡 MG: Pyridostigmine (AChE inhibitor) increases ACh dwell time → more receptor activation. This is how it treats MG.',
+    },
+  },
+  lems: {
+    name: 'Lambert-Eaton',
+    tag: 'LEMS',
+    tagColor: '#1e3a8a',
+    tagText: '#60a5fa',
+    bannerBorder: '#60a5fa',
+    bannerColor: '#60a5fa',
+    desc: 'Autoantibodies vs VG Ca²⁺ channels → reduced Ca²⁺ influx → weak ACh release. Unique: facilitates with repeated firing.',
+    caInfluxRate: 0.25,      // slow Ca²⁺ entry
+    caChannelFraction: 0.25,  // only 1 of 4 channels functional per bouton
+    exocytosisEnabled: true,
+    achReleaseFraction: 0.3,  // very little ACh released initially
+    receptorFraction: 1.0,
+    receptorBlockCompetitive: false,
+    receptorBlockFraction: 0.0,
+    acheEnabled: true,
+    acheRate: 1.0,
+    achAccumulation: false,
+    facilitation: true,       // repeated firing increases Ca²⁺ buildup
+    tips: {
+      CA_INFLUX: '🔵 LEMS: Only ~25% of Ca²⁺ channels function (autoantibodies). Ca²⁺ influx is slow and weak.',
+      EXOCYTOSIS: '🟡 LEMS: Low Ca²⁺ → minimal vesicle fusion → little ACh released. First stimulus is weak.',
+      EPP_GENERATION: '🔴 LEMS: EPP is small initially. But rapid repeated stimulation builds up Ca²⁺ → facilitation (opposite of MG!).',
+      AP_MUSCLE: '⚠️ LEMS: Unlike MG, repeated stimulation IMPROVES strength. This is the key distinguishing feature.',
+    },
+  },
+  botulism: {
+    name: 'Botulism',
+    tag: 'BOTULISM',
+    tagColor: '#581c1c',
+    tagText: '#f87171',
+    bannerBorder: '#f87171',
+    bannerColor: '#f87171',
+    desc: 'Botulinum toxin cleaves SNARE proteins → vesicles cannot fuse → no ACh release → flaccid descending paralysis.',
+    caInfluxRate: 1.0,
+    caChannelFraction: 1.0,
+    exocytosisEnabled: false,  // SNARE disabled — no fusion
+    achReleaseFraction: 0.0,
+    receptorFraction: 1.0,
+    receptorBlockCompetitive: false,
+    receptorBlockFraction: 0.0,
+    acheEnabled: true,
+    acheRate: 1.0,
+    achAccumulation: false,
+    facilitation: false,
+    tips: {
+      EXOCYTOSIS: '🔴 BOTULISM: SNARE proteins cleaved by toxin — vesicles CANNOT fuse. No ACh is released at all.',
+      DIFFUSION: '⚠️ BOTULISM: No ACh in the cleft — nothing diffuses. The cleft is empty.',
+      BINDING: '⚠️ BOTULISM: Receptors are healthy but there is no ACh to bind. They stay closed.',
+      EPP_GENERATION: '🔴 BOTULISM: No EPP generated. No depolarization. Flaccid paralysis (descending pattern).',
+      AP_MUSCLE: '🔴 BOTULISM: No muscle AP. The muscle is flaccidly paralysed.',
+    },
+  },
+  curare: {
+    name: 'Curare / NMB',
+    tag: 'CURARE',
+    tagColor: '#14532d',
+    tagText: '#86efac',
+    bannerBorder: '#22c55e',
+    bannerColor: '#22c55e',
+    desc: 'Competitive antagonist at nAChR → ACh cannot bind. Reversible by increasing ACh (neostigmine).',
+    caInfluxRate: 1.0,
+    caChannelFraction: 1.0,
+    exocytosisEnabled: true,
+    achReleaseFraction: 1.0,
+    receptorFraction: 1.0,
+    receptorBlockCompetitive: true,  // curare blocks receptors competitively
+    receptorBlockFraction: 0.67,     // 67% of receptors blocked
+    acheEnabled: true,
+    acheRate: 1.0,
+    achAccumulation: false,
+    facilitation: false,
+    tips: {
+      BINDING: '🟡 CURARE: 67% of nAChR are competitively blocked by curare. ACh cannot bind these receptors.',
+      EPP_GENERATION: '🔴 CURARE: EPP is reduced because fewer receptors open. Reversible — more ACh (via AChE inhibitor) can overcome the block.',
+      DEGRADATION: '💡 CURARE: Neostigmine (AChE inhibitor) increases ACh → displaces curare → reverses blockade. This is why we reverse NMB with neostigmine.',
+    },
+  },
+  op: {
+    name: 'Organophosphate',
+    tag: 'OP POISONING',
+    tagColor: '#3f1d1d',
+    tagText: '#fb923c',
+    bannerBorder: '#fb923c',
+    bannerColor: '#fb923c',
+    desc: 'Irreversibly inhibits AChE → ACh accumulates → initial excitation → receptor desensitization → depolarizing block.',
+    caInfluxRate: 1.0,
+    caChannelFraction: 1.0,
+    exocytosisEnabled: true,
+    achReleaseFraction: 1.0,
+    receptorFraction: 1.0,
+    receptorBlockCompetitive: false,
+    receptorBlockFraction: 0.0,
+    acheEnabled: false,       // AChE inhibited
+    acheRate: 0.0,
+    achAccumulation: true,    // ACh builds up
+    facilitation: false,
+    tips: {
+      DEGRADATION: '🔴 OP: AChE is irreversibly inhibited! ACh CANNOT be degraded. It accumulates in the cleft.',
+      BINDING: '⚠️ OP: ACh keeps binding → receptors become desensitized (depolarizing block). SLUDGE symptoms.',
+      RELAXATION: '💡 OP: Atropine (antimuscarinic) + Pralidoxime (re-activate AChE) are antidotes. But pralidoxime only works if given early (before "aging").',
+    },
+  },
+};
+
+var currentDisease = 'normal';
+
+// Get effective disease params (defaults to normal)
+function disease() {
+  return DISEASES[currentDisease] || DISEASES.normal;
+}
+
+// Apply disease state: hide/show receptors, channels based on disease
+function applyDisease(key) {
+  currentDisease = key;
+  var d = disease();
+
+  // Update disease tag
+  var tag = document.getElementById('disease-tag');
+  tag.textContent = d.tag;
+  tag.style.background = d.tagColor;
+  tag.style.color = d.tagText;
+
+  // Update disease banner
+  var banner = document.getElementById('disease-banner');
+  banner.style.borderColor = d.bannerBorder;
+  var title = document.getElementById('db-title');
+  var desc = document.getElementById('db-desc');
+  if (key === 'normal') {
+    banner.classList.remove('show');
+  } else {
+    title.textContent = d.name;
+    title.style.color = d.bannerColor;
+    desc.textContent = d.desc;
+    banner.classList.add('show');
+  }
+
+  // Hide/show receptors based on receptorFraction
+  var totalReceptors = nachrs.length;
+  var availableReceptors = Math.round(totalReceptors * d.receptorFraction);
+  for (var i = 0; i < nachrs.length; i++) {
+    nachrs[i].visible = (i < availableReceptors);
+    nachrs[i].userData.diseaseBlocked = false;
+  }
+  // Competitive block: mark extra receptors as blocked (still visible but won't activate)
+  if (d.receptorBlockCompetitive) {
+    var blockedCount = Math.round(totalReceptors * d.receptorBlockFraction);
+    for (var bi = totalReceptors - blockedCount; bi < totalReceptors; bi++) {
+      if (nachrs[bi]) {
+        nachrs[bi].visible = true;
+        nachrs[bi].userData.diseaseBlocked = true;
+        // Show blocked receptors in a dim red
+        nachrs[bi].material.color.setHex(0x884444);
+        nachrs[bi].material.emissive.setHex(0x330000);
+      }
+    }
+  }
+
+  // Hide/show Ca²⁺ channels based on caChannelFraction
+  var totalChannels = 0;
+  for (var bdi = 0; bdi < boutonData.length; bdi++) totalChannels += boutonData[bdi].channels.length;
+  var availableChannels = Math.round(totalChannels * d.caChannelFraction);
+  var chIdx = 0;
+  for (var bdi2 = 0; bdi2 < boutonData.length; bdi2++) {
+    for (var chi = 0; chi < boutonData[bdi2].channels.length; chi++) {
+      var chm = boutonData[bdi2].channels[chi];
+      var streak = caStreaks[bdi2 * CHANNELS_PER_BOUTON + chi];
+      chm.visible = (chIdx < availableChannels) || detailedMode;
+      if (streak) streak.visible = (chIdx < availableChannels) && detailedMode;
+      chIdx++;
+    }
+  }
+
+  // Reset sim to RESTING
+  phys.apTriggered = false;
+  phys.apFired = false;
+  phys.caPre = 0.10;
+  phys.vesiclesReleased = 0;
+  phys.achConc = 0;
+  phys.receptorsActivated = 0;
+  phys.epp = 0;
+  phys.vm = -90;
+  phys.acheActivity = 0;
+  phys.muscleAPs = 0;
+  phys.stimAccumulator = 0;
+  phys.facilitationCount = 0;
+  destroyAPPulse();
+  setPhase('RESTING');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  PHYSIOLOGY STATE MACHINE
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1033,6 +1325,7 @@ var phys = {
   contractionTimer: 0,
   shockwaveSpawned: false,
   sarcFlashTime: 0,
+  facilitationCount: 0,  // LEMS: tracks repeated stimulation for facilitation
 };
 
 var TIPS = {
@@ -1225,6 +1518,11 @@ function setPhase(newPhase) {
   document.getElementById('phase-name').style.color = p.color;
   document.getElementById('phase-step').textContent = p.step;
   if (TIPS[newPhase]) showTip(TIPS[newPhase]);
+  // Disease-specific tips override normal tips when available
+  var dTips = disease().tips;
+  if (dTips && dTips[newPhase]) {
+    setTimeout(function() { showTip(dTips[newPhase]); }, 800);
+  }
 
   // Update explanation panel
   updateExplanation(newPhase);
@@ -1379,6 +1677,7 @@ function fireAP() {
     phys.apTriggered = true;
     phys.apFired = false;
     phys.apPulseProgress = 0;
+    phys.facilitationCount++;  // Track repeated stimulation (LEMS facilitation)
     createAPPulse();
     setPhase('AP_PROPAGATION');
   }
@@ -1488,8 +1787,12 @@ function updatePhysiology(dt) {
   switch (phys.phase) {
 
     case 'RESTING':
+      var dRest = disease();
       phys.caPre = Math.max(0.10, phys.caPre - 0.3 * dt);
-      phys.achConc = Math.max(0, phys.achConc - 5 * dt);
+      // OP: ACh doesn't clear in resting (AChE disabled)
+      if (dRest.acheEnabled) {
+        phys.achConc = Math.max(0, phys.achConc - 5 * dt);
+      }
       phys.epp = Math.max(0, phys.epp - 8 * dt);
       phys.vm = Math.min(-90, phys.vm + (-90 - phys.vm) * dt * 3);
       phys.vesiclesReleased = 0;
@@ -1497,8 +1800,11 @@ function updatePhysiology(dt) {
       for (var ri0 = 0; ri0 < nachrs.length; ri0++) {
         if (nachrs[ri0].userData.activated) {
           nachrs[ri0].userData.activated = false;
-          nachrs[ri0].material.color.setHex(0x22c55e);
-          nachrs[ri0].material.emissive.setHex(0x06280d);
+          // Don't reset color for disease-blocked receptors (curare shows dim red)
+          if (!nachrs[ri0].userData.diseaseBlocked) {
+            nachrs[ri0].material.color.setHex(0x22c55e);
+            nachrs[ri0].material.emissive.setHex(0x06280d);
+          }
           nachrs[ri0].scale.set(1, 1, 1);
           nachrs[ri0].userData.targetScale = 1.0;
         }
@@ -1512,6 +1818,8 @@ function updatePhysiology(dt) {
           vv.position.copy(vv.userData.basePos);
           vv.scale.setScalar(1);
           vv.material.opacity = 1;
+          // Reset botulism red tint
+          vv.material.emissive.setHex(0x4a3000);
         }
       }
       // Reset bouton scales
@@ -1531,6 +1839,7 @@ function updatePhysiology(dt) {
       break;
 
     case 'CA_INFLUX':
+      var dCa = disease();
       for (var bdi3 = 0; bdi3 < boutonData.length; bdi3++) {
         var bd = boutonData[bdi3];
         bd.active = true;
@@ -1538,32 +1847,44 @@ function updatePhysiology(dt) {
         boutons[bdi3].material.emissive.setHex(0x1e3a8a);
         for (var ch = 0; ch < bd.channels.length; ch++) {
           var chm = bd.channels[ch];
+          // Skip hidden channels (LEMS: fewer functional channels)
+          if (!chm.visible) continue;
           chm.userData.active = true;
           chm.userData.glowTime = 0.5;
           // Enlarge + pulse
           var chScale = 1.0 + 0.5 * Math.sin(phys.phaseTimer * 12 + ch);
           chm.scale.setScalar(chScale);
-          // Continuous stream: spawn every 0.15s per channel
+          // Continuous stream: spawn every 0.15s per channel (slower in LEMS)
+          var spawnInterval = 0.15 / dCa.caInfluxRate;
           chm.userData.spawnTimer += dt;
-          if (chm.userData.spawnTimer >= 0.15) {
+          if (chm.userData.spawnTimer >= spawnInterval) {
             chm.userData.spawnTimer = 0;
             spawnCalciumIon(chm.position);
           }
           // Ca streak visible + pulse
           var streak = caStreaks[bdi3 * CHANNELS_PER_BOUTON + ch];
-          if (streak) {
+          if (streak && streak.visible) {
             streak.material.opacity = 0.6 + 0.4 * Math.sin(phys.phaseTimer * 15 + ch);
             streak.scale.y = 1 + 0.3 * Math.sin(phys.phaseTimer * 10 + ch);
           }
         }
       }
-      phys.caPre = Math.min(100, phys.caPre + 40 * dt);
-      if (phys.caPre > 20 && phys.phaseTimer > 0.4) {
+      phys.caPre = Math.min(100, phys.caPre + 40 * dCa.caInfluxRate * dt);
+      // LEMS: needs more time to reach threshold due to slow influx
+      var caThreshold = dCa.caInfluxRate < 0.5 ? 10 : 20;
+      if (phys.caPre > caThreshold && phys.phaseTimer > 0.4) {
         setPhase('EXOCYTOSIS');
       }
       break;
 
     case 'EXOCYTOSIS':
+      var dExo = disease();
+      // LEMS facilitation: repeated stimulation builds up Ca²⁺ → improved release
+      var effectiveReleaseFrac = dExo.achReleaseFraction;
+      if (dExo.facilitation) {
+        // Each successive AP improves release by ~20%, up to near-normal (0.9)
+        effectiveReleaseFrac = Math.min(0.9, dExo.achReleaseFraction + phys.facilitationCount * 0.15);
+      }
       var totalReleased = 0;
       for (var bdi4 = 0; bdi4 < boutonData.length; bdi4++) {
         var bd2 = boutonData[bdi4];
@@ -1573,7 +1894,15 @@ function updatePhysiology(dt) {
         boutons[bdi4].material.emissiveIntensity = glow;
         for (var vi2 = 0; vi2 < bd2.vesicles.length; vi2++) {
           var v = bd2.vesicles[vi2];
-          if (v.userData.state === 'docked' && Math.random() < dt * 4) {
+          // Botulism: SNARE disabled — vesicles cannot fuse at all
+          if (!dExo.exocytosisEnabled) {
+            // Vesicles stay docked, show a red tint to indicate failure
+            v.material.emissive.setHex(0x331100);
+            continue;
+          }
+          // LEMS: reduced fusion probability (less Ca²⁺ trigger)
+          var fuseProb = dt * 4 * effectiveReleaseFrac;
+          if (v.userData.state === 'docked' && Math.random() < fuseProb) {
             v.userData.state = 'fusing';
             v.userData.fuseTime = 0;
             v.userData.anticipating = true;
@@ -1611,14 +1940,20 @@ function updatePhysiology(dt) {
         }
       }
       phys.vesiclesReleased = totalReleased;
-      phys.achConc = Math.min(500, phys.achConc + 80 * dt);
+      // ACh concentration rises proportional to release fraction
+      phys.achConc = Math.min(500, phys.achConc + 80 * effectiveReleaseFrac * dt);
       if (phys.phaseTimer > 0.6) {
         setPhase('DIFFUSION');
       }
       break;
 
     case 'DIFFUSION':
-      phys.achConc = Math.min(500, phys.achConc + 30 * dt);
+      var dDiff = disease();
+      var diffReleaseFrac = dDiff.achReleaseFraction;
+      if (dDiff.facilitation) {
+        diffReleaseFrac = Math.min(0.9, dDiff.achReleaseFraction + phys.facilitationCount * 0.15);
+      }
+      phys.achConc = Math.min(500, phys.achConc + 30 * diffReleaseFrac * dt);
       if (phys.phaseTimer > 0.3) {
         setPhase('BINDING');
       }
@@ -1631,6 +1966,7 @@ function updatePhysiology(dt) {
       break;
 
     case 'EPP_GENERATION':
+      var dEpp = disease();
       // EPP wave spreading
       eppWave.visible = true;
       var eppFrac = Math.min(1, phys.phaseTimer / 0.5);
@@ -1646,8 +1982,15 @@ function updatePhysiology(dt) {
           if (folds[fBase + fmIdx]) folds[fBase + fmIdx].material.emissive.setHex(foldEmissive);
         }
       }
+      // Count visible, non-blocked receptors for EPP scaling
+      var availableReceptors = 0;
+      for (var ri2c = 0; ri2c < nachrs.length; ri2c++) {
+        if (nachrs[ri2c].visible && !nachrs[ri2c].userData.diseaseBlocked) availableReceptors++;
+      }
       for (var ri2b = 0; ri2b < nachrs.length; ri2b++) {
         var rb = nachrs[ri2b];
+        // Skip hidden receptors (MG: destroyed) or blocked receptors (curare: competitive)
+        if (!rb.visible || rb.userData.diseaseBlocked) continue;
         if (!rb.userData.activated && phys.achConc > 20 && Math.random() < dt * 6) {
           rb.userData.activated = true;
           rb.userData.activationTime = 0;
@@ -1663,8 +2006,11 @@ function updatePhysiology(dt) {
       }
       phys.receptorsActivated = nachrs.filter(function(r) { return r.userData.activated; }).length;
 
-      var receptorFraction = phys.receptorsActivated / nachrs.length;
-      phys.epp = Math.min(70, phys.epp + 120 * receptorFraction * dt);
+      // EPP scales by fraction of AVAILABLE receptors activated (not total)
+      var receptorFraction = availableReceptors > 0 ? phys.receptorsActivated / availableReceptors : 0;
+      // Scale EPP by disease receptor fraction (MG: fewer receptors → lower max EPP)
+      var eppScale = dEpp.receptorFraction * (dEpp.receptorBlockCompetitive ? (1 - dEpp.receptorBlockFraction) : 1);
+      phys.epp = Math.min(70 * eppScale, phys.epp + 120 * receptorFraction * dt);
       phys.vm = -90 + phys.epp;
       // VG Na⁺ channels in crater depths start glowing as Vm approaches threshold
       if (phys.vm > -70) {
@@ -1682,6 +2028,10 @@ function updatePhysiology(dt) {
           naChannels[nci2].userData.glowTime = 0.3;
         }
         setPhase('AP_MUSCLE');
+      }
+      // Disease: if EPP doesn't reach threshold, time out to degradation (no muscle AP)
+      if (!phys.apFired && phys.phaseTimer > 1.5) {
+        setPhase('DEGRADATION');
       }
       break;
 
@@ -1716,16 +2066,28 @@ function updatePhysiology(dt) {
       break;
 
     case 'DEGRADATION':
-      for (var ei = 0; ei < acheEnzymes.length; ei++) {
-        var e = acheEnzymes[ei];
-        e.userData.active = true;
-        e.userData.glowTime = 0.3;
-        // Enlarge + intense red glow
-        e.material.emissive.setHex(0xcc0000);
-        e.scale.setScalar(1.6);
+      var dDeg = disease();
+      if (dDeg.acheEnabled) {
+        for (var ei = 0; ei < acheEnzymes.length; ei++) {
+          var e = acheEnzymes[ei];
+          e.userData.active = true;
+          e.userData.glowTime = 0.3;
+          // Enlarge + intense red glow
+          e.material.emissive.setHex(0xcc0000);
+          e.scale.setScalar(1.6);
+        }
+        phys.acheActivity = Math.min(100, phys.acheActivity + 50 * dt);
+        phys.achConc = Math.max(0, phys.achConc - 120 * dDeg.acheRate * dt);
+      } else {
+        // Organophosphate: AChE inhibited — ACh accumulates, enzymes don't glow
+        for (var ei2 = 0; ei2 < acheEnzymes.length; ei2++) {
+          acheEnzymes[ei2].material.emissive.setHex(0x1a0000);
+          acheEnzymes[ei2].scale.set(0.8, 0.8, 0.8); // shriveled, inactive
+        }
+        phys.acheActivity = 0;
+        // ACh keeps accumulating
+        phys.achConc = Math.min(1000, phys.achConc + 50 * dt);
       }
-      phys.acheActivity = Math.min(100, phys.acheActivity + 50 * dt);
-      phys.achConc = Math.max(0, phys.achConc - 120 * dt);
 
       if (phys.achConc < 50) {
         for (var ri3 = 0; ri3 < nachrs.length; ri3++) {
@@ -1741,8 +2103,16 @@ function updatePhysiology(dt) {
         phys.receptorsActivated = nachrs.filter(function(r) { return r.userData.activated; }).length;
       }
 
-      if (phys.achConc < 1 && phys.phaseTimer > 1.0) {
-        setPhase('RELAXATION');
+      // OP: ACh doesn't degrade, so skip to relaxation after timeout (depolarizing block)
+      if (dDeg.acheEnabled) {
+        if (phys.achConc < 1 && phys.phaseTimer > 1.0) {
+          setPhase('RELAXATION');
+        }
+      } else {
+        // OP: after 2s, receptors desensitize → relaxation phase
+        if (phys.phaseTimer > 2.0) {
+          setPhase('RELAXATION');
+        }
       }
       break;
 
@@ -2015,7 +2385,8 @@ function updateHUD() {
   document.getElementById('rd-ca').textContent = phys.caPre.toFixed(2);
   document.getElementById('rd-ves').textContent = phys.vesiclesReleased;
   document.getElementById('rd-ach').textContent = phys.achConc.toFixed(1);
-  document.getElementById('rd-receptors').textContent = phys.receptorsActivated + ' / ' + nachrs.length;
+  var totalAvailableReceptors = nachrs.filter(function(r) { return r.visible && !r.userData.diseaseBlocked; }).length;
+  document.getElementById('rd-receptors').textContent = phys.receptorsActivated + ' / ' + totalAvailableReceptors;
   document.getElementById('rd-epp').textContent = phys.epp.toFixed(1);
   document.getElementById('rd-vm').textContent = (phys.vm >= 0 ? '+' : '') + phys.vm.toFixed(1);
   document.getElementById('rd-ache').textContent = phys.acheActivity.toFixed(0);
@@ -2296,6 +2667,10 @@ document.getElementById('btn-step').addEventListener('click', function() {
 
 document.getElementById('btn-detail').addEventListener('click', function() {
   setDetailMode(!detailedMode);
+});
+
+document.getElementById('disease-select').addEventListener('change', function(e) {
+  applyDisease(e.target.value);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
