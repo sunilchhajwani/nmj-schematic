@@ -783,7 +783,7 @@ for (var ci3 = 0; ci3 < foldCrestData.length; ci3++) {
     var rx = crest.x + Math.cos(angle) * crest.radius * 0.85;
     var rz = crest.z + Math.sin(angle) * crest.radius * 0.85;
     rm.position.set(rx, crest.y, rz);
-    rm.rotation.x = Math.PI / 2; // stand upright on the rim
+    rm.rotation.x = 0; // stand upright (cylinder default axis = Y = vertical)
     rm.userData = { activated: false, activationTime: 0, baseColor: 0x22c55e, boutonIndex: boutonIdx, targetScale: 1.0, foldIndex: ci3 };
     nachrs.push(rm);
     scene.add(rm);
